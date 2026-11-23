@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="hi">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#7b2d26"><meta name="description" content="सरस्वती शिशु मंदिर, रसूलपुर, मऊ — ज्ञान • संस्कार • शिक्षा">
+<link rel="manifest" href="/manifest.json"><link rel="stylesheet" href="/styles.css">
+<title>सरस्वती शिशु मंदिर | रसूलपुर, मऊ</title>
+</head>
+<body>
+<header class="top"><div class="brand-mark">ॐ</div><div><h1>सरस्वती शिशु मंदिर</h1><p>रसूलपुर, मऊ, उत्तर प्रदेश</p></div><button id="installBtn" class="install hidden">ऐप इंस्टॉल करें</button></header>
+<main>
+<section class="hero">
+  <div class="goddess" role="img" aria-label="माँ सरस्वती के लिए चित्र स्थान"><div class="lotus">ॐ</div><div class="goddess-caption">माँ सरस्वती</div><small>विद्यालय का आधिकारिक चित्र शीघ्र जोड़ा जाएगा</small></div>
+  <div class="hero-copy"><span class="eyebrow">ज्ञान • संस्कार • शिक्षा</span><h2>आपका स्वागत है</h2><p>शिक्षा, अनुशासन और संस्कारों के साथ उज्ज्वल भविष्य की ओर।</p><a class="primary" href="#notices">विद्यालय सूचना देखें</a></div>
+</section>
+<section id="adsSection" class="section hidden"><div class="section-head"><div><span class="eyebrow">विद्यालय अपडेट</span><h2>विशेष सूचना एवं विज्ञापन</h2></div><div id="adDots" class="dots"></div></div><div id="adSlider" class="ad-slider"></div></section>
+<section id="notices" class="section notice"><span class="eyebrow">हमारा विद्यालय</span><h2>शिक्षा के साथ संस्कार</h2><p>विद्यालय से संबंधित महत्वपूर्ण सूचनाएँ, गतिविधियाँ और घोषणाएँ यहाँ प्रकाशित की जाएँगी।</p><div class="tiles"><article><b>📚</b><h3>गुणवत्तापूर्ण शिक्षा</h3><p>सीखने और आगे बढ़ने का अवसर।</p></article><article><b>🌱</b><h3>संस्कार एवं अनुशासन</h3><p>अच्छे विचार और जिम्मेदार नागरिकता।</p></article><article><b>🏫</b><h3>विद्यालय गतिविधियाँ</h3><p>कार्यक्रमों और उपलब्धियों की जानकारी।</p></article></div></section>
+<section class="section admin"><div><span class="eyebrow">विद्यालय प्रबंधन</span><h2>प्रबंधन लॉगिन</h2><p>अधिकृत प्रबंधन सदस्य ही विज्ञापन प्रकाशित और नियंत्रित कर सकते हैं।</p></div><button id="loginOpen" class="outline">लॉगिन खोलें</button></section>
+<section id="adminPanel" class="section hidden"><div class="section-head"><h2>विज्ञापन प्रबंधन</h2><button id="logoutBtn" class="outline">लॉगआउट</button></div><form id="adForm" class="form">
+<input id="adTitle" placeholder="विज्ञापन शीर्षक" required><textarea id="adMessage" placeholder="विवरण / संदेश"></textarea><input id="adImage" type="url" placeholder="चित्र का HTTPS लिंक" required><input id="adTarget" type="url" placeholder="लिंक (वैकल्पिक)"><div class="form-row"><label>दिखाने का क्रम<input id="adOrder" type="number" value="0"></label><label>समय (सेकंड)<input id="adDuration" type="number" min="3" max="30" value="5"></label></div><label class="check"><input id="adActive" type="checkbox"> प्रकाशित करें</label><button class="primary" type="submit">विज्ञापन सेव करें</button><p id="adminStatus" role="status"></p></form><div id="adminAds"></div></section>
+</main>
+<footer><strong>सरस्वती शिशु मंदिर</strong><p>रसूलपुर, मऊ, उत्तर प्रदेश</p><small>© <span id="year"></span> विद्यालय. सर्वाधिकार सुरक्षित।</small></footer>
+<dialog id="loginDialog"><form id="loginForm" method="dialog" class="login"><button type="button" id="closeLogin" class="close">×</button><h2>प्रबंधन लॉगिन</h2><label>ईमेल / अधिकृत लॉगिन<input id="loginEmail" type="email" autocomplete="username" required></label><label>पासवर्ड<input id="loginPassword" type="password" autocomplete="current-password" required></label><button class="primary" type="submit">लॉगिन करें</button><p id="loginStatus" role="status"></p></form></dialog>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script><script src="/app.js"></script>
+</body></html>
