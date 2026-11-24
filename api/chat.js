@@ -1,8 +1,8 @@
-// Saraswati Shishu Mandir — Gemini free-tier server endpoint.
+// Saraswati Shishu Mandir — Gemini server endpoint with safe diagnostics.
 export default async function handler(req,res){
  res.setHeader("Cache-Control","no-store");
  if(req.method!=="POST")return res.status(405).json({error:"Method not allowed"});
- if(!process.env.GEMINI_API_KEY)return res.status(503).json({error:"मुफ्त AI मॉडल की API key अभी Vercel में सेट नहीं है। इसे जोड़ने के बाद AI जवाब चालू होंगे।"});
+ if(!process.env.GEMINI_API_KEY)return res.status(503).json({error:"GEMINI_API_KEY Vercel Production में मौजूद नहीं है।"});
  try{
   const body=typeof req.body==="string"?JSON.parse(req.body):(req.body||{});
   const messages=Array.isArray(body.messages)?body.messages.slice(-12):[];
@@ -12,10 +12,17 @@ export default async function handler(req,res){
   const contents=messages.map(m=>({role:m.role==="assistant"?"model":"user",parts:[{text:m.content}]}));
   const url="https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent?key="+encodeURIComponent(process.env.GEMINI_API_KEY);
   const response=await fetch(url,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({systemInstruction:{parts:[{text:system}]},contents,generationConfig:{temperature:0.35,maxOutputTokens:700}})});
-  const data=await response.json();
-  if(!response.ok)return res.status(response.status===429?429:502).json({error:response.status===429?"मुफ्त AI की अभी अनुरोध सीमा पूरी हो गई है। कुछ देर बाद फिर पूछें।":"AI सेवा अभी उत्तर नहीं दे सकी। कृपया थोड़ी देर बाद प्रयास करें।"});
+  const data=await response.json().catch(()=>({}));
+  if(!response.ok){
+   const detail=String(data?.error?.message||"").slice(0,300);
+   console.error("Gemini API rejected request",response.status,data?.error?.status||"",detail);
+   if(response.status===400||response.status===403)return res.status(502).json({error:"Gemini ने API Key या API अनुमति अस्वीकार की है। Google AI Studio में इसी Key और Generative Language API की अनुमति जाँचें।"});
+   if(response.status===404)return res.status(502).json({error:"Gemini मॉडल उपलब्ध नहीं मिला। मॉडल सेटिंग जाँचनी होगी।"});
+   if(response.status===429)return res.status(429).json({error:"Gemini की मुफ्त अनुरोध सीमा/कोटा पूरी हो गई है। कुछ देर बाद फिर प्रयास करें।"});
+   return res.status(502).json({error:"Gemini सर्वर ने अनुरोध अस्वीकार किया (HTTP "+response.status+")। कृपया बाद में प्रयास करें।"});
+  }
   const answer=data?.candidates?.[0]?.content?.parts?.map(p=>p.text||"").join("").trim();
-  if(!answer)return res.status(502).json({error:"AI ने खाली उत्तर दिया। दोबारा प्रयास करें।"});
+  if(!answer){console.error("Gemini returned no text",JSON.stringify(data).slice(0,500));return res.status(502).json({error:"Gemini ने खाली उत्तर दिया। दोबारा प्रयास करें।"});}
   return res.status(200).json({answer});
- }catch(err){return res.status(500).json({error:"AI सेवा में अस्थायी समस्या है।"});}
+ }catch(err){console.error("AI endpoint failed",String(err?.message||err).slice(0,300));return res.status(500).json({error:"AI सेवा में अस्थायी समस्या है। कृपया दोबारा प्रयास करें।"});}
 }
