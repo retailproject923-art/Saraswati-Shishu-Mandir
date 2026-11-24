@@ -245,3 +245,64 @@ const priorOpenModule=openModule;
 openModule=function(id){if(id==="store"){openStorePage();$("moduleDetail").classList.remove("hidden");return}priorOpenModule(id)};
 
 
+
+
+// Floating AI chatbot wiring: connects the visible chat widget to the secure server endpoint.
+const floatingAIHistory=[];
+const aiWindow=$("aiWindow"),aiMessages=$("aiMessages"),aiForm=$("aiForm"),aiInput=$("aiInput");
+function addFloatingAIMessage(role,text){
+ if(!aiMessages)return;
+ const node=document.createElement("div");
+ node.className=role==="user"?"ai-msg ai-user":"ai-msg ai-bot";
+ node.textContent=text;
+ aiMessages.appendChild(node);
+ aiMessages.scrollTop=aiMessages.scrollHeight;
+ return node;
+}
+function openFloatingAI(){
+ if(!aiWindow)return;
+ aiWindow.classList.remove("hidden");
+ aiInput?.focus();
+}
+$("aiLauncher")?.addEventListener("click",openFloatingAI);
+$("aiMinimize")?.addEventListener("click",()=>aiWindow?.classList.add("hidden"));
+$("aiClear")?.addEventListener("click",()=>{
+ floatingAIHistory.length=0;
+ if(aiMessages)aiMessages.innerHTML='<div class="ai-msg ai-bot"><b>नमस्ते! 🙏</b><br>मैं Saraswati AI हूँ। स्कूल और वेबसाइट से जुड़े सवाल पूछें।</div>';
+});
+document.querySelectorAll("[data-ai-prompt]").forEach(button=>button.addEventListener("click",()=>{
+ if(!aiInput||!aiForm)return;
+ aiInput.value=button.dataset.aiPrompt||"";
+ openFloatingAI();
+ aiForm.requestSubmit();
+}));
+aiForm?.addEventListener("submit",async event=>{
+ event.preventDefault();
+ const question=aiInput?.value.trim();
+ if(!question)return;
+ const send=$("aiSend");
+ addFloatingAIMessage("user",question);
+ aiInput.value="";
+ aiInput.disabled=true;
+ if(send)send.disabled=true;
+ const pending=addFloatingAIMessage("assistant","जवाब तैयार हो रहा है…");
+ floatingAIHistory.push({role:"user",content:question});
+ try{
+  const activePage=document.querySelector(".nav-item.active")?.dataset.page||"home";
+  const response=await fetch("/api/chat",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({messages:floatingAIHistory.slice(-12),pageContext:{page:activePage,visiblePageContent:"Saraswati Shishu Mandir, Rasulpur, Mau school website. Main areas: Home, Management, Students, Teachers, Fees & Accounts, School Store, Attendance, Reports, Help."}})});
+  const data=await response.json().catch(()=>({}));
+  if(!response.ok)throw new Error(data.error||"AI सेवा अभी उपलब्ध नहीं है।");
+  const answer=String(data.answer||"").trim();
+  if(!answer)throw new Error("AI से खाली जवाब मिला।");
+  if(pending)pending.textContent=answer;
+  floatingAIHistory.push({role:"assistant",content:answer});
+ }catch(error){
+  if(pending)pending.textContent="अभी जवाब नहीं मिला: "+(error.message||"कृपया थोड़ी देर बाद फिर प्रयास करें।");
+  floatingAIHistory.pop();
+ }finally{
+  aiInput.disabled=false;
+  if(send)send.disabled=false;
+  aiInput.focus();
+  if(aiMessages)aiMessages.scrollTop=aiMessages.scrollHeight;
+ }
+});
