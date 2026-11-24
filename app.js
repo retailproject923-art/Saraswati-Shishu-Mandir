@@ -10,7 +10,7 @@ function showAd(){if(!currentAds.length)return;const a=currentAds[adIndex];$("ad
 function escapeHtml(s=""){return String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));}const escapeAttr=escapeHtml;
 async function loadAds(){if(!client){renderAds(cachedAds());return}try{const {data,error}=await client.from("app_advertisements").select("id,title,message,image_path,target_url,display_order,duration_seconds,is_active,starts_at,ends_at").eq("is_active",true).order("display_order");if(error)throw error;const now=Date.now();const valid=(data||[]).filter(a=>(!a.starts_at||new Date(a.starts_at).getTime()<=now)&&(!a.ends_at||new Date(a.ends_at).getTime()>=now));localStorage.setItem("school_ads_cache",JSON.stringify(valid));renderAds(valid)}catch(e){console.warn("Ads offline/unavailable",e);renderAds(cachedAds())}}
 async function openAdmin(){if(!client){alert("लॉगिन सेवा अभी उपलब्ध नहीं है।");return}const {data:{session}}=await client.auth.getSession();if(!session){$("loginDialog").showModal();return}await showAdmin(session)}
-async function showAdmin(session){const {data:profile,error}=await client.from("profiles").select("full_name,role,is_active").eq("id",session.user.id).single();if(error||!profile||profile.role!=="owner"||!profile.is_active){$("loginStatus").textContent="इस खाते को मालिक की अनुमति नहीं मिली है।";await client.auth.signOut();return} $("adminPanel").classList.remove("hidden");$("adminPanel").scrollIntoView({behavior:"smooth"});loadAdminAds()}
+async function showAdmin(session){const {data:profile,error}=await client.from("profiles").select("full_name,role,is_active").eq("id",session.user.id).single();if(error||!profile||!["owner","management"].includes(profile.role)||!profile.is_active){$("loginStatus").textContent="इस खाते को मालिक की अनुमति नहीं मिली है।";await client.auth.signOut();return} $("adminPanel").classList.remove("hidden");$("adminPanel").scrollIntoView({behavior:"smooth"});loadAdminAds();loadPaymentAccountsAdmin()}
 async function loadAdminAds(){const {data,error}=await client.from("app_advertisements").select("*").order("display_order");$("adminAds").innerHTML=error?"विज्ञापन सूची लोड नहीं हुई।":(data||[]).map(a=>`<div class="ad-row"><b>${escapeHtml(a.title)}</b> — ${a.is_active?"प्रकाशित":"बंद"} <button class="outline" data-edit="${a.id}">बदलें</button> <button class="outline" data-toggle="${a.id}" data-active="${a.is_active}">${a.is_active?"बंद करें":"चालू करें"}</button></div>`).join("");}
 $("adminAds").addEventListener("click",async e=>{const edit=e.target.dataset.edit,toggle=e.target.dataset.toggle;if(edit){const {data}=await client.from("app_advertisements").select("*").eq("id",edit).single();if(data){editingId=data.id;$("adTitle").value=data.title;$("adMessage").value=data.message||"";$("adImage").value=data.image_path;$("adTarget").value=data.target_url||"";$("adOrder").value=data.display_order;$("adDuration").value=data.duration_seconds;$("adActive").checked=data.is_active;$("adForm").scrollIntoView({behavior:"smooth"})}}if(toggle){const active=e.target.dataset.active==="true";const {error}=await client.from("app_advertisements").update({is_active:!active}).eq("id",toggle);$("adminStatus").textContent=error?error.message:"स्थिति अपडेट हो गई।";loadAdminAds();loadAds()}});
 $("adForm").addEventListener("submit",async e=>{e.preventDefault();const payload={title:$("adTitle").value.trim(),message:$("adMessage").value.trim(),image_path:$("adImage").value.trim(),target_url:$("adTarget").value.trim()||null,display_order:Number($("adOrder").value)||0,duration_seconds:Math.min(30,Math.max(3,Number($("adDuration").value)||5)),is_active:$("adActive").checked};let q=editingId?client.from("app_advertisements").update(payload).eq("id",editingId):client.from("app_advertisements").insert(payload);const {error}=await q;$("adminStatus").textContent=error?"सेव नहीं हुआ: "+error.message:"विज्ञापन सेव हो गया।";if(!error){e.target.reset();editingId=null;$("adDuration").value=5;loadAdminAds();loadAds()}});
@@ -44,6 +44,7 @@ const moduleData=[
 {id:"teacher",group:"teachers",title:"शिक्षक डैशबोर्ड",en:"Teacher Dashboard",desc:"शिक्षक को निर्धारित कक्षाएँ और विषय दिखेंगे।",what:["अपनी कक्षा/विषय देखना","होमवर्क और नोटिस देना","उपस्थिति और अंक दर्ज करना"],status:"शिक्षक लॉगिन और डैशबोर्ड बाकी",img:"https://images.unsplash.com/photo-1580894732444-8ecded7900cd?w=900"},
 {id:"timetable",group:"teachers",title:"टाइमटेबल",en:"Class Timetable",desc:"कक्षा, विषय और शिक्षक के अनुसार समय-सारणी।",what:["पीरियड और समय सेट करना","कक्षा का टाइमटेबल देखना","बदलाव प्रकाशित करना"],status:"टाइमटेबल स्क्रीन बाकी",img:"https://images.unsplash.com/photo-1506784983877-45594efa4cbe?w=900"},
 {id:"fees",group:"fees",title:"फीस एवं रसीद",en:"Fees & Receipts",desc:"फीस संरचना, भुगतान, बकाया और रसीद।",what:["विद्यार्थी की फीस तय करना","भुगतान दर्ज करना","रसीद और बकाया रिपोर्ट"],status:"फीस फॉर्म/पेमेंट फ्लो बाकी",img:"https://images.unsplash.com/photo-1554224155-6726b3ff858f?w=900"},
+{id:"paymentinfo",group:"fees",title:"बैंक अकाउंट एवं QR",en:"Bank Account & QR",desc:"अभिभावक स्कूल फीस जमा करने के लिए वर्तमान बैंक अकाउंट और QR देख सकते हैं।",what:["वर्तमान सक्रिय बैंक अकाउंट देखना","UPI ID और QR से भुगतान करना","भुगतान से पहले स्कूल के निर्देश पढ़ना"],status:"सक्रिय भुगतान विवरण लोड होगा",img:"https://images.unsplash.com/photo-1563013544-824ae1b704d3?w=900",ready:true},
 {id:"expenses",group:"fees",title:"खर्च एवं लेखा",en:"Expenses & Accounts",desc:"विद्यालय के खर्च, आय और लेखा रिकॉर्ड।",what:["खर्च की एंट्री","श्रेणी और तारीख के अनुसार रिकॉर्ड","मासिक आय-व्यय सारांश"],status:"लेखा फॉर्म और रिपोर्ट बाकी",img:"https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=900"},
 {id:"salary",group:"fees",title:"वेतन एवं पेरोल",en:"Salary & Payroll",desc:"स्टाफ वेतन और भुगतान रिकॉर्ड।",what:["स्टाफ वेतन तय करना","मासिक भुगतान रिकॉर्ड","वेतन स्टेटमेंट"],status:"पेरोल स्क्रीन बाकी",img:"https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?w=900"},
 {id:"attendance",group:"attendance",title:"विद्यार्थी उपस्थिति",en:"Student Attendance",desc:"कक्षा/सेक्शन के अनुसार दैनिक उपस्थिति।",what:["Present/Absent दर्ज करना","महीने के अनुसार रिपोर्ट","अभिभावक को सूचना"],status:"उपस्थिति स्क्रीन बाकी",img:"https://images.unsplash.com/photo-1577896851231-70ef18881754?w=900"},
@@ -114,3 +115,52 @@ $("helpOptions").addEventListener("click",e=>{const card=e.target.closest("[data
 $("closeDetail").addEventListener("click",closeModule);
 $("moduleDetail").addEventListener("click",e=>{if(e.target===$("moduleDetail"))closeModule()});
 showPortal("home");
+
+/* School bank account and QR management */
+let editingPaymentId=null;
+function resetPaymentForm(){editingPaymentId=null;["payHolder","payBank","payNumber","payIfsc","payUpi","payQr","payInstructions"].forEach(id=>$(id).value="");$("payActive").checked=true}
+async function loadPaymentAccountsAdmin(){
+ if(!client)return;
+ const {data,error}=await client.from("school_payment_accounts").select("*").order("updated_at",{ascending:false});
+ $("paymentAccountList").innerHTML=error?"अकाउंट सूची लोड नहीं हुई: "+escapeHtml(error.message):(data||[]).map(a=>`<div class="ad-row"><b>${escapeHtml(a.account_holder)}</b> — ${escapeHtml(a.bank_name)} — ${a.is_active?"Active":"Inactive"} <button class="outline" data-pay-edit="${a.id}">बदलें</button> <button class="outline" data-pay-toggle="${a.id}" data-active="${a.is_active}">${a.is_active?"बंद करें":"चालू करें"}</button></div>`).join("");
+}
+$("paymentAccountForm").addEventListener("submit",async e=>{
+ e.preventDefault();
+ const payload={account_holder:$("payHolder").value.trim(),bank_name:$("payBank").value.trim(),account_number:$("payNumber").value.trim(),ifsc_code:$("payIfsc").value.trim()||null,upi_id:$("payUpi").value.trim()||null,qr_image_url:$("payQr").value.trim()||null,payment_instructions:$("payInstructions").value.trim()||null,is_active:$("payActive").checked,created_by:(await client.auth.getUser()).data.user?.id};
+ const q=editingPaymentId?client.from("school_payment_accounts").update(payload).eq("id",editingPaymentId):client.from("school_payment_accounts").insert(payload);
+ const {error}=await q;
+ $("paymentAdminStatus").textContent=error?"सेव नहीं हुआ: "+error.message:"बैंक अकाउंट विवरण सेव हो गया।";
+ if(!error){resetPaymentForm();await loadPaymentAccountsAdmin()}
+});
+$("payReset").addEventListener("click",resetPaymentForm);
+$("paymentAccountList").addEventListener("click",async e=>{
+ const id=e.target.dataset.payEdit||e.target.dataset.payToggle;if(!id)return;
+ if(e.target.dataset.payEdit){
+  const {data,error}=await client.from("school_payment_accounts").select("*").eq("id",id).single();
+  if(error||!data){$("paymentAdminStatus").textContent="रिकॉर्ड नहीं खुला।";return}
+  editingPaymentId=id;$("payHolder").value=data.account_holder;$("payBank").value=data.bank_name;$("payNumber").value=data.account_number;$("payIfsc").value=data.ifsc_code||"";$("payUpi").value=data.upi_id||"";$("payQr").value=data.qr_image_url||"";$("payInstructions").value=data.payment_instructions||"";$("payActive").checked=data.is_active;
+  $("paymentAccountForm").scrollIntoView({behavior:"smooth"});
+ }else{
+  const active=e.target.dataset.active==="true";
+  const {error}=await client.from("school_payment_accounts").update({is_active:!active}).eq("id",id);
+  $("paymentAdminStatus").textContent=error?"स्थिति नहीं बदली: "+error.message:"स्थिति अपडेट हो गई।";
+  await loadPaymentAccountsAdmin();
+ }
+});
+async function renderParentPaymentInfo(host){
+ host.innerHTML="<h2>स्कूल फीस भुगतान / School Fee Payment</h2><p>अभिभावक वर्तमान सक्रिय बैंक अकाउंट या QR से भुगतान कर सकते हैं। भुगतान करने से पहले विवरण की पुष्टि विद्यालय कार्यालय से कर लें।</p><div class='payment-public-list'>लोड हो रहा है…</div>";
+ const list=host.querySelector(".payment-public-list");
+ const {data,error}=await client.from("school_payment_accounts").select("account_holder,bank_name,account_number,ifsc_code,upi_id,qr_image_url,payment_instructions").eq("is_active",true).order("updated_at",{ascending:false});
+ if(error){list.textContent="भुगतान विवरण अभी उपलब्ध नहीं हैं। कृपया विद्यालय कार्यालय से संपर्क करें।";return}
+ if(!data?.length){list.textContent="अभी विद्यालय ने बैंक अकाउंट/QR प्रकाशित नहीं किया है।";return}
+ list.innerHTML=data.map(a=>`<article class="payment-public-card"><h3>${escapeHtml(a.bank_name)}</h3><p><b>खाताधारक:</b> ${escapeHtml(a.account_holder)}</p><p><b>अकाउंट नंबर:</b> <span class="account-number">${escapeHtml(a.account_number)}</span></p><p><b>IFSC:</b> ${escapeHtml(a.ifsc_code||"—")}</p><p><b>UPI ID:</b> ${escapeHtml(a.upi_id||"—")}</p>${a.qr_image_url?`<img class="payment-qr" src="${escapeAttr(a.qr_image_url)}" alt="School fee payment QR code" loading="lazy">`:""}<p>${escapeHtml(a.payment_instructions||"भुगतान के बाद रसीद के लिए स्कूल कार्यालय से संपर्क करें।")}</p></article>`).join("");
+}
+const originalOpenModule=openModule;
+openModule=function(id){
+ if(id!=="paymentinfo")return originalOpenModule(id);
+ const host=$("detailContent");host.innerHTML="";
+ const title=document.createElement("h2");title.textContent="बैंक अकाउंट एवं QR / Bank Account & QR";
+ const intro=document.createElement("p");intro.textContent="अभिभावक यहाँ विद्यालय द्वारा प्रकाशित वर्तमान भुगतान विवरण देख सकते हैं।";
+ const img=document.createElement("img");img.className="detail-hero";img.src="https://images.unsplash.com/photo-1563013544-824ae1b704d3?w=900";img.alt="Digital payment";
+ host.append(title,intro,img);renderParentPaymentInfo(host);$("moduleDetail").classList.remove("hidden");
+};
