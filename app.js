@@ -32,3 +32,85 @@ $("langHi").addEventListener("click",()=>setLanguage("hi"));$("langEn").addEvent
 setLanguage(localStorage.getItem("school_ui_language")==="en"?"en":"hi");
 function assistantAnswer(question){const q=String(question||"").toLowerCase();const dict=uiText[document.documentElement.lang==="en"?"en":"hi"];if(/login|लॉग.?इन|पासवर्ड|password|id/.test(q))return dict.chatLogin;if(/fee|फीस|शुल्क|payment|भुगतान|dues|बकाया/.test(q))return dict.chatFees;if(/homework|होम.?वर्क|गृहकार्य|assignment|असाइन/.test(q))return dict.chatHomework;if(/attendance|उपस्थिति|हाजिरी/.test(q))return dict.chatAttendance;if(/result|रिजल्ट|परिणाम|marks|अंक/.test(q))return dict.chatResult;if(/teacher|शिक्षक|अध्यापक|class|कक्षा|subject|विषय/.test(q))return dict.chatTeacher;return dict.chatHuman}
 $("chatForm").addEventListener("submit",e=>{e.preventDefault();const field=$("chatInput"),question=field.value.trim();if(!question)return;const box=$("chatMessages");const user=document.createElement("div");user.className="chat-bubble user";user.textContent=question;box.appendChild(user);const reply=document.createElement("div");reply.className="chat-bubble bot";reply.textContent=assistantAnswer(question);box.appendChild(reply);field.value="";box.scrollTop=box.scrollHeight});
+
+// ERP navigation: module cards open descriptive detail screens.
+const moduleData=[
+{id:"overview",group:"management",title:"मुख्य डैशबोर्ड",en:"Main Dashboard",desc:"विद्यालय की कुल स्थिति, आज की गतिविधियाँ और जरूरी अलर्ट।",what:["कुल विद्यार्थी और स्टाफ का सारांश","आज की उपस्थिति और फीस स्थिति","नए नोटिस और जरूरी अलर्ट"],status:"डैशबोर्ड डेटा कनेक्ट होना बाकी है",img:"https://images.unsplash.com/photo-1497366754035-f200968a6e72?w=900"},
+{id:"users",group:"management",title:"यूजर एवं लॉगिन प्रबंधन",en:"User & Login Management",desc:"शिक्षक, कर्मचारी, विद्यार्थी और अभिभावक के अकाउंट।",what:["नया यूजर और भूमिका चुनना","ID/पासवर्ड जारी करना","अकाउंट चालू या बंद करना"],status:"सुरक्षित अकाउंट निर्माण सुविधा बाकी",img:"https://images.unsplash.com/photo-1521737711867-e3b97375f902?w=900"},
+{id:"classes",group:"management",title:"कक्षा, सेक्शन एवं विषय",en:"Classes & Subjects",desc:"कक्षाएँ, सेक्शन, विषय और कक्षा-शिक्षक व्यवस्था।",what:["कक्षा और सेक्शन जोड़ना","विषय तय करना","शिक्षक को कक्षा/विषय देना"],status:"फॉर्म और डेटा कनेक्शन बाकी",img:"https://images.unsplash.com/photo-1509062522246-3755977927d7?w=900"},
+{id:"students",group:"students",title:"विद्यार्थी रिकॉर्ड",en:"Student Records",desc:"प्रत्येक विद्यार्थी का सुरक्षित प्रोफाइल और रिकॉर्ड।",what:["नया विद्यार्थी जोड़ना","कक्षा/सेक्शन और अभिभावक लिंक","प्रोफाइल और दस्तावेज देखना"],status:"विद्यार्थी फॉर्म और रिकॉर्ड जोड़ना बाकी",img:"https://images.unsplash.com/photo-1503676260728-1c00da094a0b?w=900"},
+{id:"parents",group:"students",title:"अभिभावक पोर्टल",en:"Parent Portal",desc:"अभिभावक अपने बच्चे की जानकारी देख सकेंगे।",what:["बच्चे की उपस्थिति","होमवर्क और नोटिस","फीस और परिणाम"],status:"अभिभावक लॉगिन/लिंकिंग बाकी",img:"https://images.unsplash.com/photo-1491013516836-7db643ee125a?w=900"},
+{id:"homework",group:"students",title:"होमवर्क एवं असाइनमेंट",en:"Homework & Assignments",desc:"कक्षा और विषय के अनुसार होमवर्क और नोट्स।",what:["शिक्षक होमवर्क अपलोड करें","विद्यार्थी/अभिभावक देखें","जमा करने की स्थिति ट्रैक"],status:"यूजर स्क्रीन और अपलोड फॉर्म बाकी",img:"https://images.unsplash.com/photo-1434030216411-0b793f4b4173?w=900"},
+{id:"teacher",group:"teachers",title:"शिक्षक डैशबोर्ड",en:"Teacher Dashboard",desc:"शिक्षक को निर्धारित कक्षाएँ और विषय दिखेंगे।",what:["अपनी कक्षा/विषय देखना","होमवर्क और नोटिस देना","उपस्थिति और अंक दर्ज करना"],status:"शिक्षक लॉगिन और डैशबोर्ड बाकी",img:"https://images.unsplash.com/photo-1580894732444-8ecded7900cd?w=900"},
+{id:"timetable",group:"teachers",title:"टाइमटेबल",en:"Class Timetable",desc:"कक्षा, विषय और शिक्षक के अनुसार समय-सारणी।",what:["पीरियड और समय सेट करना","कक्षा का टाइमटेबल देखना","बदलाव प्रकाशित करना"],status:"टाइमटेबल स्क्रीन बाकी",img:"https://images.unsplash.com/photo-1506784983877-45594efa4cbe?w=900"},
+{id:"fees",group:"fees",title:"फीस एवं रसीद",en:"Fees & Receipts",desc:"फीस संरचना, भुगतान, बकाया और रसीद।",what:["विद्यार्थी की फीस तय करना","भुगतान दर्ज करना","रसीद और बकाया रिपोर्ट"],status:"फीस फॉर्म/पेमेंट फ्लो बाकी",img:"https://images.unsplash.com/photo-1554224155-6726b3ff858f?w=900"},
+{id:"expenses",group:"fees",title:"खर्च एवं लेखा",en:"Expenses & Accounts",desc:"विद्यालय के खर्च, आय और लेखा रिकॉर्ड।",what:["खर्च की एंट्री","श्रेणी और तारीख के अनुसार रिकॉर्ड","मासिक आय-व्यय सारांश"],status:"लेखा फॉर्म और रिपोर्ट बाकी",img:"https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=900"},
+{id:"salary",group:"fees",title:"वेतन एवं पेरोल",en:"Salary & Payroll",desc:"स्टाफ वेतन और भुगतान रिकॉर्ड।",what:["स्टाफ वेतन तय करना","मासिक भुगतान रिकॉर्ड","वेतन स्टेटमेंट"],status:"पेरोल स्क्रीन बाकी",img:"https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?w=900"},
+{id:"attendance",group:"attendance",title:"विद्यार्थी उपस्थिति",en:"Student Attendance",desc:"कक्षा/सेक्शन के अनुसार दैनिक उपस्थिति।",what:["Present/Absent दर्ज करना","महीने के अनुसार रिपोर्ट","अभिभावक को सूचना"],status:"उपस्थिति स्क्रीन बाकी",img:"https://images.unsplash.com/photo-1577896851231-70ef18881754?w=900"},
+{id:"staffattendance",group:"attendance",title:"शिक्षक एवं स्टाफ उपस्थिति",en:"Staff Attendance",desc:"शिक्षक और कर्मचारियों की उपस्थिति।",what:["दैनिक उपस्थिति","मासिक रिपोर्ट","वेतन से संबंधित सारांश"],status:"स्टाफ उपस्थिति स्क्रीन बाकी",img:"https://images.unsplash.com/photo-1521737711867-e3b97375f902?w=900"},
+{id:"results",group:"reports",title:"परीक्षा एवं परिणाम",en:"Exams & Results",desc:"परीक्षा, विषयवार अंक और रिपोर्ट कार्ड।",what:["परीक्षा/टेस्ट बनाना","विषयवार अंक दर्ज करना","रिपोर्ट कार्ड प्रकाशित करना"],status:"परिणाम फॉर्म और प्रिंट टेम्पलेट बाकी",img:"https://images.unsplash.com/photo-1513258496099-48168024d0e5?w=900"},
+{id:"notices",group:"reports",title:"नोटिस एवं घोषणाएँ",en:"Notices & Announcements",desc:"विद्यालय की सामान्य और जरूरी सूचनाएँ।",what:["नोटिस लिखना","कक्षा/सभी यूजर को भेजना","पुराने नोटिस देखना"],status:"नोटिस मैनेजमेंट स्क्रीन बाकी",img:"https://images.unsplash.com/photo-1504711434969-e33886168f5c?w=900"},
+{id:"grievance",group:"reports",title:"शिकायत एवं सुझाव",en:"Complaints & Suggestions",desc:"अभिभावक/विद्यार्थी की शिकायतों का प्रबंधन।",what:["शिकायत दर्ज करना","प्रबंधन को असाइन करना","स्थिति और जवाब अपडेट करना"],status:"शिकायत पोर्टल बाकी",img:"https://images.unsplash.com/photo-1521791136064-7986c2920216?w=900"},
+{id:"ads",group:"management",title:"विज्ञापन प्रबंधन",en:"Advertisement Manager",desc:"मुख्य पेज के विज्ञापन नियंत्रित करना।",what:["विज्ञापन जोड़ना/बदलना","चालू या बंद करना","क्रम और अवधि सेट करना"],status:"मौजूदा मालिक विज्ञापन पैनल उपलब्ध",img:"https://images.unsplash.com/photo-1558655146-d09347e92766?w=900",ready:true}
+];
+const navGroups={home:null,management:"management",students:"students",teachers:"teachers",fees:"fees",attendance:"attendance",reports:"reports"};
+const navLabels={management:"Management",students:"Students",teachers:"Teachers",fees:"Fees & Accounts",attendance:"Attendance",reports:"Reports"};
+function showPortal(page){
+ document.querySelectorAll(".nav-item").forEach(b=>b.classList.toggle("active",b.dataset.page===page));
+ const home=page==="home";
+ $("modulePortal").classList.toggle("hidden",home||page==="help");
+ $("helpPortal").classList.toggle("hidden",page!=="help");
+ ["adsSection","notices","help","assistant","adminPanel"].forEach(id=>{const el=$(id);if(el)el.classList.add("hidden")});
+ if(home){$("adsSection").classList.remove("hidden");$("notices").classList.remove("hidden");$("help").classList.add("hidden");}
+ if(page==="help"){renderHelpOptions();$("helpPortal").scrollIntoView({behavior:"smooth"});return}
+ if(!home){$("portalTitle").textContent=navLabels[page]||"School Systems";$("portalIntro").textContent="किसी सिस्टम पर टैप करें। उसकी जानकारी, उपयोग और उपलब्धता खुलेगी।";renderModules(moduleData.filter(m=>m.group===navGroups[page]));$("modulePortal").scrollIntoView({behavior:"smooth"})}
+}
+function renderModules(items){
+ const grid=$("moduleGrid");grid.innerHTML="";
+ items.forEach(m=>{const b=document.createElement("button");b.className="module-card";b.dataset.module=m.id;const img=document.createElement("img");img.src=m.img;img.alt=m.title;img.loading="lazy";img.onerror=()=>img.style.display="none";const body=document.createElement("div");body.className="module-card-body";const h=document.createElement("h3");h.textContent=m.title;const p=document.createElement("p");p.textContent=m.desc;const s=document.createElement("span");s.className="module-status"+(m.ready?" ready":"");s.textContent=m.ready?"उपलब्ध: सीमित कार्य":"Setup Pending";body.append(h,p,s);b.append(img,body);grid.append(b)})
+}
+function openModule(id){
+ const m=moduleData.find(x=>x.id===id);if(!m)return;
+ const host=$("detailContent");host.innerHTML="";
+ const eyebrow=document.createElement("span");eyebrow.className="eyebrow";eyebrow.textContent="SCHOOL ERP MODULE";
+ const title=document.createElement("h2");title.textContent=m.title+" / "+m.en;
+ const desc=document.createElement("p");desc.textContent=m.desc;
+ const img=document.createElement("img");img.className="detail-hero";img.src=m.img;img.alt=m.title;img.onerror=()=>img.style.display="none";
+ const h=document.createElement("h3");h.textContent="इस सिस्टम को खोलने से क्या होगा?";
+ const ul=document.createElement("ul");m.what.forEach(x=>{const li=document.createElement("li");li.textContent=x;ul.append(li)});
+ const status=document.createElement("p");status.textContent="वर्तमान स्थिति: "+m.status+".";
+ const note=document.createElement("p");note.textContent="यह पेज अभी मॉड्यूल की जानकारी दिखाता है। वास्तविक रिकॉर्ड जोड़ने/बदलने की सुविधा तैयार और टेस्ट होने के बाद ही सक्रिय होगी।";
+ const close=document.createElement("button");close.className="outline";close.textContent="वापस जाएँ";close.addEventListener("click",closeModule);
+ host.append(eyebrow,title,desc,img,h,ul,status,note,close);
+ if(m.id==="ads"){const open=document.createElement("button");open.className="primary";open.textContent="विज्ञापन प्रबंधन खोलें";open.style.marginLeft="10px";open.addEventListener("click",()=>{closeModule();openAdmin()});host.append(open)}
+ $("moduleDetail").classList.remove("hidden")
+}
+function closeModule(){$("moduleDetail").classList.add("hidden")}
+const helpItems=[
+{id:"manual",title:"पूरा User Manual",en:"Complete User Manual",desc:"सभी यूजर के लिए चरण-दर-चरण गाइड।",body:"पहले अपनी भूमिका चुनें। विद्यालय द्वारा जारी ID और पासवर्ड से लॉगिन करें। लॉगिन के बाद केवल आपकी अनुमति वाले मेन्यू दिखने चाहिए। किसी जानकारी में गलती हो तो विद्यालय कार्यालय से संपर्क करें।"},
+{id:"ownerhelp",title:"Owner / मालिक गाइड",en:"Owner Guide",desc:"यूजर, कक्षाएँ, सेटिंग और विज्ञापन।",body:"मालिक यूजर अकाउंट, कक्षा, विषय, स्टाफ भूमिका, विज्ञापन और रिपोर्ट नियंत्रित करेगा। अकाउंट प्रबंधन सुविधा सुरक्षित रूप से तैयार होने के बाद लाइव होगी।"},
+{id:"teacherhelp",title:"Teacher / शिक्षक गाइड",en:"Teacher Guide",desc:"उपस्थिति, होमवर्क, नोटिस और अंक।",body:"शिक्षक अपने अधिकृत अकाउंट से प्रवेश करें। निर्धारित कक्षा और विषय चुनें। फिर होमवर्क, नोटिस, उपस्थिति और अंक विकल्प उपयोग करें।"},
+{id:"studenthelp",title:"Student / विद्यार्थी गाइड",en:"Student Guide",desc:"होमवर्क, टाइमटेबल, नोटिस और रिजल्ट।",body:"विद्यार्थी अपनी ID से लॉगिन करके होमवर्क, विषय, टाइमटेबल, नोटिस और प्रकाशित परिणाम देख सकेगा।"},
+{id:"parenthelp",title:"Parent / अभिभावक गाइड",en:"Parent Guide",desc:"बच्चे की फीस, उपस्थिति और पढ़ाई।",body:"अभिभावक अपने खाते से जुड़े बच्चे की फीस, रसीद, उपस्थिति, होमवर्क और परिणाम देख सकेंगे।"},
+{id:"feeshelp",title:"Fees / फीस सहायता",en:"Fees Help",desc:"फीस, भुगतान और रसीद की जानकारी।",body:"फीस मॉड्यूल में विद्यार्थी चुनकर फीस विवरण, भुगतान और बकाया देखा जा सकेगा। ऑनलाइन भुगतान तभी उपलब्ध होगा जब सुरक्षित भुगतान गेटवे जोड़ा जाएगा।"},
+{id:"attendancehelp",title:"Attendance / उपस्थिति सहायता",en:"Attendance Help",desc:"विद्यार्थी और स्टाफ उपस्थिति।",body:"उपस्थिति में तारीख और कक्षा चुनकर रिकॉर्ड दर्ज/देखा जाएगा। गलत एंट्री के सुधार के लिए अधिकृत शिक्षक या प्रबंधन से संपर्क करें।"},
+{id:"chathelp",title:"AI Assistant",en:"AI Assistant",desc:"सामान्य सवालों के तुरंत जवाब।",body:"चैट असिस्टेंट में हिंदी या English में सवाल लिखें। वर्तमान संस्करण FAQ-आधारित है; निजी फीस/छात्र रिकॉर्ड नहीं दिखाता।"},
+{id:"accounthelp",title:"Login और सुरक्षा",en:"Login & Security",desc:"पासवर्ड, अकाउंट और डेटा सुरक्षा।",body:"अपना पासवर्ड साझा न करें। लॉगिन न हो तो ID जाँचें और विद्यालय प्रबंधन से पासवर्ड रीसेट करवाएँ। काम पूरा होने के बाद लॉगआउट करें।"}
+];
+function renderHelpOptions(){
+ const box=$("helpOptions");box.innerHTML="";
+ helpItems.forEach(h=>{const b=document.createElement("button");b.className="help-option";b.dataset.help=h.id;const strong=document.createElement("strong");strong.textContent=h.title+" / "+h.en;const span=document.createElement("span");span.textContent=h.desc;b.append(strong,span);box.append(b)});
+ $("helpDetail").classList.add("hidden");$("helpDetail").innerHTML=""
+}
+function openHelp(id){
+ const h=helpItems.find(x=>x.id===id);if(!h)return;
+ const box=$("helpDetail");box.innerHTML="";const title=document.createElement("h3");title.textContent=h.title+" / "+h.en;const p=document.createElement("p");p.textContent=h.body;box.append(title,p);
+ if(id==="chathelp"){const b=document.createElement("button");b.className="primary";b.textContent="Assistant खोलें";b.addEventListener("click",()=>{$("helpPortal").classList.add("hidden");$("assistant").classList.remove("hidden");$("assistant").scrollIntoView({behavior:"smooth"})});box.append(b)}
+ box.classList.remove("hidden");box.scrollIntoView({behavior:"smooth",block:"nearest"})
+}
+document.querySelectorAll(".nav-item").forEach(b=>b.addEventListener("click",()=>showPortal(b.dataset.page)));
+$("moduleGrid").addEventListener("click",e=>{const card=e.target.closest("[data-module]");if(card)openModule(card.dataset.module)});
+$("helpOptions").addEventListener("click",e=>{const card=e.target.closest("[data-help]");if(card)openHelp(card.dataset.help)});
+$("closeDetail").addEventListener("click",closeModule);
+$("moduleDetail").addEventListener("click",e=>{if(e.target===$("moduleDetail"))closeModule()});
+showPortal("home");
