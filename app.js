@@ -269,6 +269,14 @@ function speakSaraswatiAnswer(text){
 }
 const aiVoiceStatus=$("aiVoiceStatus");
 const aiMic=$("aiMic");
+const aiVoiceLang=$("aiVoiceLang");
+let aiVoiceLanguage="hi-IN";
+if(aiVoiceLang)aiVoiceLang.addEventListener("click",()=>{
+ aiVoiceLanguage=aiVoiceLanguage==="hi-IN"?"en-IN":"hi-IN";
+ aiVoiceLang.textContent=aiVoiceLanguage==="hi-IN"?"भाषा: हिंदी":"Language: English";
+ if(aiVoiceStatus)aiVoiceStatus.textContent=aiVoiceLanguage==="hi-IN"?"अब हिंदी में बोलें।":"Speak in English now.";
+ if(aiRecognition)aiRecognition.lang=aiVoiceLanguage;
+});
 const SpeechRecognition=window.SpeechRecognition||window.webkitSpeechRecognition;
 let aiRecognition=null;
 let aiRecognizedText="";
@@ -278,7 +286,7 @@ if(aiMic){
   aiMic.addEventListener("click",()=>{if(aiVoiceStatus)aiVoiceStatus.textContent="Voice Input के लिए Android Chrome या समर्थित ब्राउज़र खोलें।"});
  }else{
   aiRecognition=new SpeechRecognition();
-  aiRecognition.lang="hi-IN";
+  aiRecognition.lang=aiVoiceLanguage;
   aiRecognition.continuous=false;
   aiRecognition.interimResults=true;
   aiRecognition.maxAlternatives=1;
