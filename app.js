@@ -401,9 +401,34 @@ async function sendVoiceToAI(blob){
  finally{if(aiMessages)aiMessages.scrollTop=aiMessages.scrollHeight}
 }
 async function startVoiceRecording(){
+ const SpeechRecognition=window.SpeechRecognition||window.webkitSpeechRecognition;
+ if(SpeechRecognition){
+  try{
+   const recognition=new SpeechRecognition();
+   recognition.lang=aiVoiceLanguage;
+   recognition.continuous=false;
+   recognition.interimResults=false;
+   recognition.maxAlternatives=1;
+   aiMic.classList.add("listening");aiMic.textContent="■";
+   if(aiVoiceStatus)aiVoiceStatus.textContent="सुन रहा हूँ… अब अपना सवाल बोलें।";
+   recognition.onresult=event=>{
+    const transcript=event.results?.[0]?.[0]?.transcript?.trim()||"";
+    aiMic.classList.remove("listening");aiMic.textContent="🎙️";
+    if(!transcript){if(aiVoiceStatus)aiVoiceStatus.textContent="आवाज़ समझ नहीं आई। फिर से माइक दबाएँ।";return}
+    if(aiInput){aiInput.value=transcript;if(aiVoiceStatus)aiVoiceStatus.textContent="आपका सवाल भेजा जा रहा है…";aiForm?.requestSubmit()}
+   };
+   recognition.onerror=event=>{
+    aiMic.classList.remove("listening");aiMic.textContent="🎙️";
+    if(aiVoiceStatus)aiVoiceStatus.textContent=event.error==="not-allowed"?"माइक की अनुमति दें: Chrome → Site settings → Microphone → Allow.":"आवाज़ पहचान नहीं हुई। फिर से प्रयास करें या सवाल टाइप करें।";
+   };
+   recognition.onend=()=>{aiMic.classList.remove("listening");aiMic.textContent="🎙️"};
+   recognition.start();
+   return;
+  }catch(error){if(aiVoiceStatus)aiVoiceStatus.textContent="Voice recognition शुरू नहीं हुआ; रिकॉर्डिंग विकल्प आज़मा रहे हैं…"}
+ }
  if(!navigator.mediaDevices?.getUserMedia||!window.MediaRecorder){
   aiInput?.focus();
-  if(aiVoiceStatus)aiVoiceStatus.textContent="इस ऐप ब्राउज़र में रिकॉर्डिंग समर्थित नहीं है। सवाल वाले बॉक्स पर टैप करें और मोबाइल कीबोर्ड का 🎙️ माइक दबाकर बोलें।";
+  if(aiVoiceStatus)aiVoiceStatus.textContent="इस ब्राउज़र में voice recognition उपलब्ध नहीं है। Chrome में खोलें या कीबोर्ड का 🎙️ दबाएँ।";
   return;
  }
  try{
@@ -425,7 +450,7 @@ async function startVoiceRecording(){
   aiRecordingTimer=setTimeout(()=>{if(aiMediaRecorder?.state==="recording")aiMediaRecorder.stop()},12000);
  }catch(error){
   aiMicStream?.getTracks().forEach(t=>t.stop());aiMicStream=null;
-  if(aiVoiceStatus)aiVoiceStatus.textContent=error.name==="NotAllowedError"?"माइक की अनुमति दें: Browser Settings → Site Settings → Microphone → Allow.":"माइक शुरू नहीं हुआ। Chrome में वेबसाइट खोलकर दोबारा प्रयास करें।";
+  if(aiVoiceStatus)aiVoiceStatus.textContent=error.name==="NotAllowedError"?"माइक की अनुमति दें: Chrome → Site settings → Microphone → Allow.":"माइक शुरू नहीं हुआ। Chrome में वेबसाइट खोलकर दोबारा प्रयास करें।";
  }
 }
 if(aiMic)aiMic.addEventListener("click",()=>{
@@ -474,7 +499,8 @@ aiForm?.addEventListener("submit",async event=>{
    speakButton.addEventListener("click",()=>speakSaraswatiAnswer(answer));
    pending.appendChild(document.createElement("br"));pending.appendChild(speakButton);
   }
-  if(aiVoiceStatus)aiVoiceStatus.textContent="जवाब मिल गया। सुनने के लिए 🔊 जवाब सुनें दबाएँ।";
+  if(aiVoiceStatus)aiVoiceStatus.textContent="जवाब मिल गया। अब जवाब सुनें।";
+  speakSaraswatiAnswer(answer);
   floatingAIHistory.push({role:"assistant",content:answer});
  }catch(error){
   if(pending)pending.textContent="अभी जवाब नहीं मिला: "+(error.message||"कृपया थोड़ी देर बाद फिर प्रयास करें।");
