@@ -21,8 +21,8 @@ export default async function handler(req,res){
    const voicePrompt=aiVoiceLanguagePrompt(body.voiceLanguage);
    contents.push({role:"user",parts:[{text:voicePrompt},{inline_data:{mime_type:mimeType,data:audioBase64}}]});
   }
-  const url="https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash-lite:generateContent?key="+encodeURIComponent(process.env.GEMINI_API_KEY);
-  const response=await fetch(url,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({systemInstruction:{parts:[{text:system}]},contents,generationConfig:{temperature:0.35,maxOutputTokens:700}})});
+  const url="https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash-lite:generateContent";
+  const response=await fetch(url,{method:"POST",headers:{"Content-Type":"application/json","x-goog-api-key":process.env.GEMINI_API_KEY},body:JSON.stringify({systemInstruction:{parts:[{text:system}]},contents,generationConfig:{temperature:0.35,maxOutputTokens:700}})});
   const data=await response.json().catch(()=>({}));
   if(!response.ok){
    const detail=String(data?.error?.message||"").slice(0,300);
