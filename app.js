@@ -16,7 +16,7 @@ async function loadSchoolUsers(){
  const host=$("schoolUserList");if(!host||!client)return;
  const {data,error}=await client.from("profiles").select("id,full_name,phone,login_id,role,is_active,created_at").order("created_at",{ascending:false}).limit(150);
  if(error){host.textContent="यूजर सूची नहीं खुली: "+error.message;return}
- host.innerHTML=(data||[]).map(u=>'<div class="admin-record"><b>'+escapeHtml(u.full_name||"नाम नहीं")+'</b> — '+escapeHtml(u.role)+'<small>User ID: '+escapeHtml(u.login_id||"—")+' | फोन: '+escapeHtml(u.phone||"—")+' | स्थिति: '+(u.is_active?"Active":"Pending/Blocked")+'</small><div class="record-actions"><button class="outline" data-user-toggle="'+u.id+'" data-active="'+u.is_active+'">'+(u.is_active?"लॉगिन बंद करें":"अप्रूव / चालू करें")+'</button></div></div>').join("")||"अभी कोई यूजर रिकॉर्ड नहीं है।";
+ host.innerHTML=(data||[]).map(u=>'<div class="admin-record"><b>'+escapeHtml(u.full_name||"नाम नहीं")+'</b> — '+escapeHtml(u.role)+'<small>User ID: '+escapeHtml(u.login_id||"—")+' | फोन: '+escapeHtml(u.phone||"—")+' | स्थिति: '+(u.is_active?"Active":"Pending/Blocked")+'</small>'+((["owner","principal"].includes(u.role))?"":'<div class="record-actions"><button class="outline" data-user-toggle="'+u.id+'" data-active="'+u.is_active+'">'+(u.is_active?"लॉगिन बंद करें":"अप्रूव / चालू करें")+'</button></div>')+'</div>').join("")||"अभी कोई यूजर रिकॉर्ड नहीं है।";
 }
 $("schoolUserList")?.addEventListener("click",async e=>{
  const id=e.target.dataset.userToggle;if(!id)return;
