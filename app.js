@@ -10,12 +10,90 @@ function showAd(){if(!currentAds.length)return;const a=currentAds[adIndex];$("ad
 function escapeHtml(s=""){return String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));}const escapeAttr=escapeHtml;
 async function loadAds(){if(!client){renderAds(cachedAds());return}try{const {data,error}=await client.from("app_advertisements").select("id,title,message,image_path,target_url,display_order,duration_seconds,is_active,starts_at,ends_at").eq("is_active",true).order("display_order");if(error)throw error;const now=Date.now();const valid=(data||[]).filter(a=>(!a.starts_at||new Date(a.starts_at).getTime()<=now)&&(!a.ends_at||new Date(a.ends_at).getTime()>=now));localStorage.setItem("school_ads_cache",JSON.stringify(valid));renderAds(valid)}catch(e){console.warn("Ads offline/unavailable",e);renderAds(cachedAds())}}
 async function openAdmin(){if(!client){alert("लॉगिन सेवा अभी उपलब्ध नहीं है।");return}const {data:{session}}=await client.auth.getSession();if(!session){$("loginDialog").showModal();return}await showAdmin(session)}
-async function showAdmin(session){const {data:profile,error}=await client.from("profiles").select("full_name,role,is_active").eq("id",session.user.id).single();if(error||!profile||!profile.is_active){$("loginStatus").textContent="यह अकाउंट सक्रिय नहीं है।";await client.auth.signOut();return}if(profile.role==="parent"){await openStorePage();return}if(!["owner","management"].includes(profile.role)){$("loginStatus").textContent="इस खाते को प्रबंधन अनुमति नहीं मिली है।";await client.auth.signOut();return} $("adminPanel").classList.remove("hidden");$("adminPanel").scrollIntoView({behavior:"smooth"});loadAdminAds();loadPaymentAccountsAdmin();loadProductsAdmin();loadStoreOrdersAdmin()}
-async function loadAdminAds(){const {data,error}=await client.from("app_advertisements").select("*").order("display_order");$("adminAds").innerHTML=error?"विज्ञापन सूची लोड नहीं हुई।":(data||[]).map(a=>`<div class="ad-row"><b>${escapeHtml(a.title)}</b> — ${a.is_active?"प्रकाशित":"बंद"} <button class="outline" data-edit="${a.id}">बदलें</button> <button class="outline" data-toggle="${a.id}" data-active="${a.is_active}">${a.is_active?"बंद करें":"चालू करें"}</button></div>`).join("");}
+async function showAdmin(session){const {data:profile,error}=await client.from("profiles").select("full_name,role,is_active").eq("id",session.user.id).single();if(error||!profile||!profile.is_active){$("loginStatus").textContent="यह अकाउंट सक्रिय नहीं है।";await client.auth.signOut();return}if(profile.role==="parent"){await openStorePage();return}if(!["owner","management"].includes(profile.role)){$("loginStatus").textContent="इस खाते को प्रबंधन अनुमति नहीं मिली है।";await client.auth.signOut();return} $("adminPanel").classList.remove("hidden");$("adminPanel").scrollIntoView({behavior:"smooth"});loadAdminAds();loadPaymentAccountsAdmin();loadProductsAdmin();loadStoreOrdersAdmin();loadSchoolUsers();loadFeesAdmin()}
+
+async function loadSchoolUsers(){
+ const host=$("schoolUserList");if(!host||!client)return;
+ const {data,error}=await client.from("profiles").select("id,full_name,phone,login_id,role,is_active,created_at").order("created_at",{ascending:false}).limit(150);
+ if(error){host.textContent="यूजर सूची नहीं खुली: "+error.message;return}
+ host.innerHTML=(data||[]).map(u=>'<div class="admin-record"><b>'+escapeHtml(u.full_name||"नाम नहीं")+'</b> — '+escapeHtml(u.role)+'<small>User ID: '+escapeHtml(u.login_id||"—")+' | फोन: '+escapeHtml(u.phone||"—")+' | स्थिति: '+(u.is_active?"Active":"Pending/Blocked")+'</small><div class="record-actions"><button class="outline" data-user-toggle="'+u.id+'" data-active="'+u.is_active+'">'+(u.is_active?"लॉगिन बंद करें":"अप्रूव / चालू करें")+'</button></div></div>').join("")||"अभी कोई यूजर रिकॉर्ड नहीं है।";
+}
+$("schoolUserList")?.addEventListener("click",async e=>{
+ const id=e.target.dataset.userToggle;if(!id)return;
+ const active=e.target.dataset.active==="true";
+ const {error}=await client.from("profiles").update({is_active:!active}).eq("id",id);
+ $("schoolUserStatus").textContent=error?"स्थिति नहीं बदली: "+error.message:"यूजर स्थिति अपडेट हो गई。";
+ loadSchoolUsers();
+});
+$("schoolUserForm")?.addEventListener("submit",async e=>{
+ e.preventDefault();const status=$("schoolUserStatus");status.textContent="अकाउंट बनाया जा रहा है…";
+ const {data:{session}}=await client.auth.getSession();if(!session){status.textContent="पहले Management लॉगिन करें।";return}
+ let phone=$("newUserPhone").value.trim().replace(/[\\s()-]/g,"");if(/^\\d{10}$/.test(phone))phone="+91"+phone;
+ try{
+  const response=await fetch("/api/school-users",{method:"POST",headers:{"Content-Type":"application/json",Authorization:"Bearer "+session.access_token},body:JSON.stringify({action:"create",full_name:$("newUserName").value.trim(),phone,login_id:$("newUserLoginId").value.trim(),password:$("newUserPassword").value,role:$("newUserRole").value})});
+  const data=await response.json();if(!response.ok)throw new Error(data.error||"अकाउंट नहीं बना।");
+  status.textContent="अकाउंट सक्रिय हो गया। User ID: "+data.user_id+" | फोन: "+data.phone;
+  $("schoolUserForm").reset();loadSchoolUsers();
+ }catch(error){status.textContent=error.message}
+});
+async function loadFeesAdmin(){
+ if(!client)return;
+ const [rates,students]=await Promise.all([
+  client.from("fee_class_rates").select("*").order("class_name"),
+  client.from("students").select("id,student_name,admission_no,class_id,classes(class_name,section)").eq("is_active",true).order("student_name")
+ ]);
+ if(rates.error)$("feeRateList").textContent="कक्षा फीस नहीं खुली: "+rates.error.message;
+ else $("feeRateList").innerHTML=(rates.data||[]).map(r=>'<div class="admin-record"><b>'+escapeHtml(r.class_name)+' — '+escapeHtml(r.academic_year)+'</b><small>Admission ₹'+Number(r.admission_fee).toFixed(2)+' | Monthly ₹'+Number(r.monthly_fee).toFixed(2)+' | Annual ₹'+Number(r.annual_fee).toFixed(2)+' | Other ₹'+Number(r.other_fee).toFixed(2)+'</small><small>'+escapeHtml(r.notes||"")+'</small></div>').join("")||"अभी कक्षा फीस दर्ज नहीं है।";
+ const select=$("feeStudent");
+ if(students.error){select.innerHTML='<option value="">विद्यार्थी सूची नहीं खुली</option>'}
+ else select.innerHTML='<option value="">विद्यार्थी चुनें</option>'+(students.data||[]).map(s=>'<option value="'+s.id+'">'+escapeHtml(s.student_name)+' — '+escapeHtml(s.admission_no)+' — '+escapeHtml(s.classes?.class_name||"कक्षा तय नहीं")+'</option>').join("");
+ await loadStudentFeeCards();
+}
+$("feeRateForm")?.addEventListener("submit",async e=>{
+ e.preventDefault();const status=$("feeRateStatus");status.textContent="फीस सेव हो रही है…";
+ const name=$("feeClassName").value.trim(),year=$("feeAcademicYear").value.trim();
+ const {data:userData}=await client.auth.getUser();
+ const payload={class_name:name,academic_year:year,admission_fee:Number($("feeAdmission").value)||0,monthly_fee:Number($("feeMonthly").value)||0,annual_fee:Number($("feeAnnual").value)||0,other_fee:Number($("feeOther").value)||0,notes:$("feeNotes").value.trim()||null,created_by:userData.user?.id};
+ const {data:existing,error:findError}=await client.from("fee_class_rates").select("id").ilike("class_name",name).eq("academic_year",year).maybeSingle();
+ if(findError){status.textContent="जाँच नहीं हुई: "+findError.message;return}
+ const result=existing?await client.from("fee_class_rates").update(payload).eq("id",existing.id):await client.from("fee_class_rates").insert(payload);
+ status.textContent=result.error?"फीस सेव नहीं हुई: "+result.error.message:"कक्षा की फीस सेव हो गई।";
+ if(!result.error){e.target.reset();$("feeAcademicYear").value="2026-27";["feeAdmission","feeMonthly","feeAnnual","feeOther"].forEach(id=>$(id).value="0");loadFeesAdmin()}
+});
+$("studentFeeForm")?.addEventListener("submit",async e=>{
+ e.preventDefault();const status=$("studentFeeStatus");const studentId=$("feeStudent").value;if(!studentId){status.textContent="विद्यार्थी चुनें।";return}
+ status.textContent="फीस कार्ड बनाया जा रहा है…";
+ const payload={student_id:studentId,invoice_no:"SSM-"+Date.now(),fee_month:$("feeInvoiceMonth").value,amount:Number($("feeInvoiceAmount").value),due_date:$("feeDueDate").value||null,status:"pending",description:$("feeInvoiceNote").value.trim()||null};
+ const {error}=await client.from("fee_invoices").insert(payload);
+ status.textContent=error?"फीस कार्ड नहीं बना: "+error.message:"बच्चे का फीस कार्ड बन गया।";
+ if(!error){e.target.reset();loadStudentFeeCards()}
+});
+async function loadStudentFeeCards(){
+ const host=$("studentFeeCards");if(!host)return;
+ const {data,error}=await client.from("fee_invoices").select("id,invoice_no,fee_month,amount,due_date,status,description,students(student_name,admission_no,classes(class_name,section)),fee_payments(amount,payment_status)").order("fee_month",{ascending:false}).limit(200);
+ if(error){host.textContent="फीस कार्ड नहीं खुले: "+error.message;return}
+ host.innerHTML=(data||[]).map(i=>{
+  const paid=(i.fee_payments||[]).filter(p=>p.payment_status==="verified").reduce((n,p)=>n+Number(p.amount),0),due=Math.max(0,Number(i.amount)-paid);
+  const payControls=due>0?'<div class="record-actions"><input type="number" min="1" max="'+due+'" step="0.01" placeholder="जमा रकम ₹" id="pay-'+i.id+'" style="max-width:140px"><select id="mode-'+i.id+'" style="max-width:130px"><option value="cash">Cash</option><option value="upi">UPI</option><option value="bank">Bank</option></select><button class="outline" data-fee-pay="'+i.id+'" data-total="'+i.amount+'">भुगतान दर्ज करें</button></div>':"";
+  return '<div class="admin-record"><b>'+escapeHtml(i.students?.student_name||"विद्यार्थी")+' — '+escapeHtml(i.students?.admission_no||"")+'</b><small>'+escapeHtml(i.students?.classes?.class_name||"कक्षा")+' | '+escapeHtml(i.description||i.invoice_no)+' | तारीख: '+escapeHtml(i.fee_month)+'</small><small>कुल फीस ₹'+Number(i.amount).toFixed(2)+' | जमा ₹'+paid.toFixed(2)+' | बाकी ₹'+due.toFixed(2)+' | स्थिति: '+(due===0?"Paid":paid>0?"Partial":"Pending")+'</small>'+payControls+'</div>';
+ }).join("")||"अभी कोई फीस कार्ड नहीं बना है।";
+}
+$("studentFeeCards")?.addEventListener("click",async e=>{
+ const id=e.target.dataset.feePay;if(!id)return;
+ const amount=Number($("pay-"+id)?.value),mode=$("mode-"+id)?.value||"cash";if(!(amount>0)){alert("जमा रकम भरें।");return}
+ const {error}=await client.from("fee_payments").insert({invoice_id:id,amount,payment_mode:mode,payment_status:"verified",paid_at:new Date().toISOString()});
+ if(error){alert("भुगतान दर्ज नहीं हुआ: "+error.message);return}
+ const {data:payments}=await client.from("fee_payments").select("amount,payment_status").eq("invoice_id",id);
+ const paid=(payments||[]).filter(p=>p.payment_status==="verified").reduce((n,p)=>n+Number(p.amount),0);
+ const total=Number(e.target.dataset.total||0);
+ await client.from("fee_invoices").update({status:paid>=total?"paid":paid>0?"partial":"pending"}).eq("id",id);
+ loadStudentFeeCards();
+});
+\nasync function loadAdminAds(){const {data,error}=await client.from("app_advertisements").select("*").order("display_order");$("adminAds").innerHTML=error?"विज्ञापन सूची लोड नहीं हुई।":(data||[]).map(a=>`<div class="ad-row"><b>${escapeHtml(a.title)}</b> — ${a.is_active?"प्रकाशित":"बंद"} <button class="outline" data-edit="${a.id}">बदलें</button> <button class="outline" data-toggle="${a.id}" data-active="${a.is_active}">${a.is_active?"बंद करें":"चालू करें"}</button></div>`).join("");}
 $("adminAds").addEventListener("click",async e=>{const edit=e.target.dataset.edit,toggle=e.target.dataset.toggle;if(edit){const {data}=await client.from("app_advertisements").select("*").eq("id",edit).single();if(data){editingId=data.id;$("adTitle").value=data.title;$("adMessage").value=data.message||"";$("adImage").value=data.image_path;$("adTarget").value=data.target_url||"";$("adOrder").value=data.display_order;$("adDuration").value=data.duration_seconds;$("adActive").checked=data.is_active;$("adForm").scrollIntoView({behavior:"smooth"})}}if(toggle){const active=e.target.dataset.active==="true";const {error}=await client.from("app_advertisements").update({is_active:!active}).eq("id",toggle);$("adminStatus").textContent=error?error.message:"स्थिति अपडेट हो गई।";loadAdminAds();loadAds()}});
 $("adForm").addEventListener("submit",async e=>{e.preventDefault();const payload={title:$("adTitle").value.trim(),message:$("adMessage").value.trim(),image_path:$("adImage").value.trim(),target_url:$("adTarget").value.trim()||null,display_order:Number($("adOrder").value)||0,duration_seconds:Math.min(30,Math.max(3,Number($("adDuration").value)||5)),is_active:$("adActive").checked};let q=editingId?client.from("app_advertisements").update(payload).eq("id",editingId):client.from("app_advertisements").insert(payload);const {error}=await q;$("adminStatus").textContent=error?"सेव नहीं हुआ: "+error.message:"विज्ञापन सेव हो गया।";if(!error){e.target.reset();editingId=null;$("adDuration").value=5;loadAdminAds();loadAds()}});
 $("loginOpen").addEventListener("click",openAdmin);$("closeLogin").addEventListener("click",()=>$("loginDialog").close());
-$("loginForm").addEventListener("submit",async e=>{e.preventDefault();$("loginStatus").textContent="जाँच हो रही है…";const {data,error}=await client.auth.signInWithPassword({email:$("loginEmail").value.trim(),password:$("loginPassword").value});if(error){$("loginStatus").textContent="लॉगिन नहीं हुआ: "+error.message;return}$("loginDialog").close();await showAdmin(data.session)});
+$("loginForm").addEventListener("submit",async e=>{e.preventDefault();$("loginStatus").textContent="जाँच हो रही है…";const login=$("loginEmail").value.trim(),password=$("loginPassword").value;let session=null;if(login.includes("@")){const {data,error}=await client.auth.signInWithPassword({email:login,password});if(error){$("loginStatus").textContent="लॉगिन नहीं हुआ: "+error.message;return}session=data.session}else{try{const r=await fetch("/api/school-users",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({action:"login",login_id:login,password})});const d=await r.json();if(!r.ok)throw new Error(d.error||"लॉगिन नहीं हुआ।");const {data,error}=await client.auth.setSession(d.session);if(error)throw error;session=data.session}catch(error){$("loginStatus").textContent="लॉगिन नहीं हुआ: "+error.message;return}}$("loginDialog").close();await showAdmin(session)});
 $("forgotPasswordBtn").addEventListener("click",async()=>{const email=$("loginEmail").value.trim();if(!email){$("loginStatus").textContent="पहले अपना Owner ईमेल लिखें।";$("loginEmail").focus();return}if(!client){$("loginStatus").textContent="लॉगिन सेवा उपलब्ध नहीं है।";return}$("loginStatus").textContent="रीसेट लिंक भेजा जा रहा है…";const {error}=await client.auth.resetPasswordForEmail(email,{redirectTo:"https://saraswati-shishu-mandir-retailproject923-6937.vercel.app"});$("loginStatus").textContent=error?("लिंक नहीं भेजा गया: "+error.message):"यदि यह ईमेल पंजीकृत है, तो उस पर पासवर्ड रीसेट लिंक भेज दिया गया है। Gmail का Inbox/Spam देखें।"});
 client?.auth.onAuthStateChange((event)=>{if(event==="PASSWORD_RECOVERY"){$("resetDialog").showModal();$("resetStatus").textContent="सुरक्षित लिंक सत्यापित है। नया पासवर्ड बनाएँ।"}});
 $("resetForm").addEventListener("submit",async e=>{e.preventDefault();const p=$("newPassword").value;if(p!==$("confirmPassword").value){$("resetStatus").textContent="दोनों पासवर्ड एक जैसे नहीं हैं।";return}if(p.length<8){$("resetStatus").textContent="कम-से-कम 8 अक्षर का पासवर्ड रखें।";return}$("resetStatus").textContent="पासवर्ड सेव हो रहा है…";const {error}=await client.auth.updateUser({password:p});if(error){$("resetStatus").textContent="पासवर्ड सेव नहीं हुआ: "+error.message;return}$("resetDialog").close();$("loginDialog").showModal();$("loginStatus").textContent="नया पासवर्ड सेव हो गया। अब नए पासवर्ड से लॉगिन करें।";$("loginPassword").value="";$("newPassword").value="";$("confirmPassword").value="";await client.auth.signOut()});
@@ -242,7 +320,7 @@ async function placeStoreOrder(){
 }
 
 const priorOpenModule=openModule;
-openModule=function(id){if(id==="store"){openStorePage();$("moduleDetail").classList.remove("hidden");return}priorOpenModule(id)};
+openModule=function(id){if(id==="store"){openStorePage();$("moduleDetail").classList.remove("hidden");return}if(id==="users"||id==="fees"){openAdmin().then(()=>{const target=$(id==="users"?"userApprovalSection":"feeManagementSection");target?.scrollIntoView({behavior:"smooth",block:"start"})});return}priorOpenModule(id)};
 
 
 
