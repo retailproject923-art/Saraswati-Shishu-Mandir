@@ -11,7 +11,7 @@ export default async function handler(req,res){
  try{
   const body=typeof req.body==="string"?JSON.parse(req.body):(req.body||{});
   const action=String(body.action||"");
-  const headers={apikey:service,Authorization:"Bearer "+service,"Content-Type":"application/json"};
+  const headers={apikey:service,"Content-Type":"application/json"};
   if(action==="login"){
    const loginId=String(body.login_id||"").trim();
    const password=String(body.password||"");
