@@ -259,6 +259,54 @@ function addFloatingAIMessage(role,text){
  aiMessages.scrollTop=aiMessages.scrollHeight;
  return node;
 }
+function speakSaraswatiAnswer(text){
+ if(!("speechSynthesis" in window)){if(aiVoiceStatus)aiVoiceStatus.textContent="इस ब्राउज़र में बोलकर सुनाने की सुविधा उपलब्ध नहीं है।";return}
+ window.speechSynthesis.cancel();
+ const utterance=new SpeechSynthesisUtterance(String(text||""));
+ utterance.lang=/[ऀ-ॿ]/.test(utterance.text)?"hi-IN":"en-IN";
+ utterance.rate=0.95;
+ window.speechSynthesis.speak(utterance);
+}
+const aiVoiceStatus=$("aiVoiceStatus");
+const aiMic=$("aiMic");
+const SpeechRecognition=window.SpeechRecognition||window.webkitSpeechRecognition;
+let aiRecognition=null;
+let aiRecognizedText="";
+if(aiMic){
+ if(!SpeechRecognition){
+  aiMic.title="इस ब्राउज़र में Voice Input उपलब्ध नहीं है";
+  aiMic.addEventListener("click",()=>{if(aiVoiceStatus)aiVoiceStatus.textContent="Voice Input के लिए Android Chrome या समर्थित ब्राउज़र खोलें।"});
+ }else{
+  aiRecognition=new SpeechRecognition();
+  aiRecognition.lang="hi-IN";
+  aiRecognition.continuous=false;
+  aiRecognition.interimResults=true;
+  aiRecognition.maxAlternatives=1;
+  aiRecognition.onstart=()=>{aiRecognizedText="";aiMic.classList.add("listening");aiMic.textContent="■";if(aiVoiceStatus)aiVoiceStatus.textContent="सुन रहा हूँ… अब अपना सवाल बोलें।"};
+  aiRecognition.onresult=event=>{
+   let finalText="";
+   for(let i=event.resultIndex;i<event.results.length;i++){
+    const text=event.results[i][0].transcript;
+    if(event.results[i].isFinal)finalText+=text;
+   }
+   if(finalText){aiRecognizedText+=finalText;aiInput.value=aiRecognizedText.trim();}
+   else{
+    const interim=Array.from(event.results).map(r=>r[0].transcript).join(" ");
+    aiInput.value=(aiRecognizedText+" "+interim).trim();
+   }
+  };
+  aiRecognition.onerror=event=>{if(aiVoiceStatus)aiVoiceStatus.textContent=event.error==="not-allowed"?"माइक की अनुमति दें, फिर दोबारा दबाएँ।":"आवाज़ नहीं समझ आई। फिर से माइक दबाकर बोलें।";};
+  aiRecognition.onend=()=>{
+   aiMic.classList.remove("listening");aiMic.textContent="🎙️";
+   if(aiVoiceStatus)aiVoiceStatus.textContent=aiRecognizedText?"आपका सवाल भेजा जा रहा है…":"माइक दबाकर हिंदी या English में बोलें।";
+   if(aiRecognizedText.trim()&&aiInput.value.trim())aiForm.requestSubmit();
+  };
+  aiMic.addEventListener("click",()=>{
+   if(aiMic.classList.contains("listening")){aiRecognition.stop();return}
+   try{window.speechSynthesis?.cancel();aiRecognition.start()}catch(e){if(aiVoiceStatus)aiVoiceStatus.textContent="माइक शुरू नहीं हुआ। पेज रीलोड करके फिर प्रयास करें।"}
+  });
+ }
+}
 function openFloatingAI(){
  if(!aiWindow)return;
  aiWindow.classList.remove("hidden");
@@ -294,7 +342,14 @@ aiForm?.addEventListener("submit",async event=>{
   if(!response.ok)throw new Error(data.error||"AI सेवा अभी उपलब्ध नहीं है।");
   const answer=String(data.answer||"").trim();
   if(!answer)throw new Error("AI से खाली जवाब मिला।");
-  if(pending)pending.textContent=answer;
+  if(pending){
+   pending.textContent=answer;
+   const speakButton=document.createElement("button");
+   speakButton.type="button";speakButton.className="ai-speak-button";speakButton.textContent="🔊 जवाब सुनें";
+   speakButton.addEventListener("click",()=>speakSaraswatiAnswer(answer));
+   pending.appendChild(document.createElement("br"));pending.appendChild(speakButton);
+  }
+  if(aiVoiceStatus)aiVoiceStatus.textContent="जवाब मिल गया। सुनने के लिए 🔊 जवाब सुनें दबाएँ।";
   floatingAIHistory.push({role:"assistant",content:answer});
  }catch(error){
   if(pending)pending.textContent="अभी जवाब नहीं मिला: "+(error.message||"कृपया थोड़ी देर बाद फिर प्रयास करें।");
