@@ -212,14 +212,12 @@ async function placeStoreOrder(){
  const {data:{session}}=await client.auth.getSession();if(!session){$("loginDialog").showModal();return}
  const studentId=$("storeChild")?.value;if(!studentId){$("storeStatus").textContent="कृपया बच्चे का चयन करें।";return}
  if(!storeCart.length){$("storeStatus").textContent="कार्ट खाली है।";return}
- const total=storeCart.reduce((s,x)=>s+x.price*x.qty,0);
- const {data:order,error}=await client.from("store_orders").insert({parent_user_id:session.user.id,student_id:studentId,total_amount:total,payment_status:"pending",order_status:"placed",payment_reference:$("storePaymentRef")?.value.trim()||null}).select().single();
+ const items=storeCart.map(x=>({product_id:x.id,quantity:x.qty}));
+ const {data:orderId,error}=await client.rpc("place_school_store_order",{p_student_id:studentId,p_items:items,p_payment_reference:$("storePaymentRef")?.value.trim()||null});
  if(error){$("storeStatus").textContent="ऑर्डर नहीं बना: "+error.message;return}
- const items=storeCart.map(x=>({order_id:order.id,product_id:x.id,product_name:x.name,unit_price:x.price,quantity:x.qty,line_total:x.price*x.qty}));
- const {error:itemError}=await client.from("store_order_items").insert(items);
- if(itemError){$("storeStatus").textContent="ऑर्डर बना, लेकिन आइटम सेव नहीं हुए। ऑफिस से संपर्क करें: "+itemError.message;return}
- $("storeStatus").textContent="ऑर्डर भेज दिया गया। भुगतान UPI/QR से करें; स्कूल ऑफिस भुगतान सत्यापित करेगा। आपका ऑर्डर Pending रहेगा।";
- storeCart=[];renderStoreCart();loadStoreOrdersAdmin();
+ $("storeStatus").textContent="ऑर्डर #"+String(orderId).slice(0,8)+" भेज दिया गया। स्टॉक अपडेट हो गया है। भुगतान स्कूल के QR/UPI से करें और Transaction ID ऑफिस को दें। ऑफिस सत्यापन के बाद Paid स्थिति करेगा।";
+ storeCart=[];renderStoreCart();
 }
+
 const priorOpenModule=openModule;
 openModule=function(id){if(id==="store"){openStorePage();$("moduleDetail").classList.remove("hidden");return}priorOpenModule(id)};
