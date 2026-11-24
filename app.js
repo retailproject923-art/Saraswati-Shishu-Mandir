@@ -221,3 +221,23 @@ async function placeStoreOrder(){
 
 const priorOpenModule=openModule;
 openModule=function(id){if(id==="store"){openStorePage();$("moduleDetail").classList.remove("hidden");return}priorOpenModule(id)};
+
+(()=> {
+ const launcher=$("aiLauncher"),panel=$("aiWindow"),form=$("aiForm"),input=$("aiInput"),messages=$("aiMessages");
+ if(!launcher||!panel||!form||!input||!messages)return;
+ let history=[];
+ const add=(text,kind)=>{const node=document.createElement("div");node.className="ai-msg "+(kind==="user"?"ai-user":"ai-bot");node.textContent=text;messages.appendChild(node);messages.scrollTop=messages.scrollHeight;return node;};
+ const welcome=()=>{history=[];messages.innerHTML="";const node=document.createElement("div");node.className="ai-msg ai-bot";node.textContent="नमस्ते! मैं Saraswati AI हूँ। हिंदी या English में अपना सवाल पूछें।";messages.appendChild(node);};
+ launcher.addEventListener("click",()=>{panel.classList.toggle("hidden");if(!panel.classList.contains("hidden"))input.focus();});
+ $("aiMinimize").addEventListener("click",()=>panel.classList.add("hidden"));
+ $("aiClear").addEventListener("click",welcome);
+ document.querySelectorAll("[data-ai-prompt]").forEach(b=>b.addEventListener("click",()=>{input.value=b.dataset.aiPrompt;form.requestSubmit();}));
+ form.addEventListener("submit",async e=>{
+  e.preventDefault();const question=input.value.trim();if(!question)return;
+  add(question,"user");history.push({role:"user",content:question});input.value="";input.disabled=true;$("aiSend").disabled=true;
+  const pending=add("सोच रहा हूँ…","bot");
+  try{const response=await fetch("/api/chat",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({messages:history})});const data=await response.json();if(!response.ok)throw new Error(data.error||"अभी उत्तर उपलब्ध नहीं है।");pending.textContent=data.answer;history.push({role:"assistant",content:data.answer});}
+  catch(err){pending.textContent=err.message||"कनेक्शन में समस्या है। कृपया फिर प्रयास करें।";history.pop();}
+  finally{input.disabled=false;$("aiSend").disabled=false;input.focus();messages.scrollTop=messages.scrollHeight;}
+ });
+})();
