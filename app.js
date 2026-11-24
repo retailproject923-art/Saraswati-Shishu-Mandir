@@ -36,8 +36,33 @@ $("schoolUserForm")?.addEventListener("submit",async e=>{
   $("schoolUserForm").reset();loadSchoolUsers();
  }catch(error){status.textContent=error.message}
 });
+async function loadClassAndStudentManagement(){
+ const classes=await client.from("classes").select("id,class_name,section,academic_year").order("class_name");
+ const classSelect=$("newStudentClass");
+ if(classSelect)classSelect.innerHTML='<option value="">कक्षा चुनें</option>'+(classes.data||[]).map(c=>'<option value="'+c.id+'">'+escapeHtml(c.class_name)+' - '+escapeHtml(c.section)+'</option>').join("");
+ const list=$("classManagementList");
+ if(list)list.innerHTML=(classes.data||[]).map(c=>'<div class="admin-record"><b>'+escapeHtml(c.class_name)+' - '+escapeHtml(c.section)+'</b><small>'+escapeHtml(c.academic_year)+'</small></div>').join("")||"अभी कक्षा नहीं जोड़ी गई है।";
+ const students=await client.from("students").select("id,student_name,admission_no,parent_name,parent_phone,classes(class_name,section)").eq("is_active",true).order("student_name");
+ const sh=$("studentManagementList");
+ if(sh)sh.innerHTML=(students.data||[]).map(s=>'<div class="admin-record"><b>'+escapeHtml(s.student_name)+'</b><small>'+escapeHtml(s.admission_no)+' | '+escapeHtml(s.classes?.class_name||"कक्षा तय नहीं")+' | '+escapeHtml(s.parent_name||"")+' | '+escapeHtml(s.parent_phone||"")+'</small></div>').join("")||"अभी विद्यार्थी नहीं जोड़े गए हैं।";
+}
+$("classManagementForm")?.addEventListener("submit",async e=>{
+ e.preventDefault();const status=$("classManagementStatus");status.textContent="कक्षा सेव हो रही है…";
+ const payload={class_name:$("newClassName").value.trim(),section:$("newClassSection").value.trim()||"A",academic_year:$("newClassYear").value.trim()};
+ const {error}=await client.from("classes").insert(payload);
+ status.textContent=error?"कक्षा सेव नहीं हुई: "+error.message:"कक्षा सेव हो गई।";
+ if(!error){e.target.reset();$("newClassSection").value="A";$("newClassYear").value="2026-27";loadClassAndStudentManagement()}
+});
+$("studentManagementForm")?.addEventListener("submit",async e=>{
+ e.preventDefault();const status=$("studentManagementStatus");status.textContent="विद्यार्थी सेव हो रहा है…";
+ const payload={student_name:$("newStudentName").value.trim(),admission_no:$("newStudentAdmission").value.trim(),class_id:$("newStudentClass").value,parent_name:$("newStudentParent").value.trim()||null,parent_phone:$("newStudentPhone").value.trim()||null,address:$("newStudentAddress").value.trim()||null,is_active:true};
+ const {error}=await client.from("students").insert(payload);
+ status.textContent=error?"विद्यार्थी सेव नहीं हुआ: "+error.message:"विद्यार्थी सेव हो गया।";
+ if(!error){e.target.reset();loadClassAndStudentManagement();loadFeesAdmin()}
+});
 async function loadFeesAdmin(){
  if(!client)return;
+ await loadClassAndStudentManagement();
  const [rates,students]=await Promise.all([
   client.from("fee_class_rates").select("*").order("class_name"),
   client.from("students").select("id,student_name,admission_no,class_id,classes(class_name,section)").eq("is_active",true).order("student_name")
