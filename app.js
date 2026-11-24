@@ -28,7 +28,7 @@ $("schoolUserList")?.addEventListener("click",async e=>{
 $("schoolUserForm")?.addEventListener("submit",async e=>{
  e.preventDefault();const status=$("schoolUserStatus");status.textContent="अकाउंट बनाया जा रहा है…";
  const {data:{session}}=await client.auth.getSession();if(!session){status.textContent="पहले Management लॉगिन करें।";return}
- let phone=$("newUserPhone").value.trim().replace(/[\\s()-]/g,"");if(/^\\d{10}$/.test(phone))phone="+91"+phone;
+ let phone=$("newUserPhone").value.trim().replace(/[\s()-]/g,"");if(/^\d{10}$/.test(phone))phone="+91"+phone;
  try{
   const response=await fetch("/api/school-users",{method:"POST",headers:{"Content-Type":"application/json",Authorization:"Bearer "+session.access_token},body:JSON.stringify({action:"create",full_name:$("newUserName").value.trim(),phone,login_id:$("newUserLoginId").value.trim(),password:$("newUserPassword").value,role:$("newUserRole").value})});
   const data=await response.json();if(!response.ok)throw new Error(data.error||"अकाउंट नहीं बना।");
