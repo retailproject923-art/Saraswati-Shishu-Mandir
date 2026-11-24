@@ -31,7 +31,26 @@ function setLanguage(lang){const dict=uiText[lang]||uiText.hi;document.documentE
 $("langHi").addEventListener("click",()=>setLanguage("hi"));$("langEn").addEventListener("click",()=>setLanguage("en"));
 setLanguage(localStorage.getItem("school_ui_language")==="en"?"en":"hi");
 function assistantAnswer(question){const q=String(question||"").toLowerCase();const dict=uiText[document.documentElement.lang==="en"?"en":"hi"];if(/login|लॉग.?इन|पासवर्ड|password|id/.test(q))return dict.chatLogin;if(/fee|फीस|शुल्क|payment|भुगतान|dues|बकाया/.test(q))return dict.chatFees;if(/homework|होम.?वर्क|गृहकार्य|assignment|असाइन/.test(q))return dict.chatHomework;if(/attendance|उपस्थिति|हाजिरी/.test(q))return dict.chatAttendance;if(/result|रिजल्ट|परिणाम|marks|अंक/.test(q))return dict.chatResult;if(/teacher|शिक्षक|अध्यापक|class|कक्षा|subject|विषय/.test(q))return dict.chatTeacher;return dict.chatHuman}
-$("chatForm").addEventListener("submit",e=>{e.preventDefault();const field=$("chatInput"),question=field.value.trim();if(!question)return;const box=$("chatMessages");const user=document.createElement("div");user.className="chat-bubble user";user.textContent=question;box.appendChild(user);const reply=document.createElement("div");reply.className="chat-bubble bot";reply.textContent=assistantAnswer(question);box.appendChild(reply);field.value="";box.scrollTop=box.scrollHeight});
+let aiHistory=[];
+$("chatForm").addEventListener("submit",async e=>{
+ e.preventDefault();
+ const field=$("chatInput"),question=field.value.trim();
+ if(!question)return;
+ const box=$("chatMessages"),send=$("chatForm").querySelector('button[type="submit"]');
+ const user=document.createElement("div");user.className="chat-bubble user";user.textContent=question;box.appendChild(user);
+ field.value="";field.disabled=true;if(send)send.disabled=true;
+ const reply=document.createElement("div");reply.className="chat-bubble bot";reply.textContent="जवाब तैयार हो रहा है…";box.appendChild(reply);box.scrollTop=box.scrollHeight;
+ aiHistory.push({role:"user",content:question});
+ try{
+  const activePage=document.querySelector(".nav-item.active")?.dataset.page||"home";
+  const response=await fetch("/api/chat",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({messages:aiHistory.slice(-12),pageContext:{page:activePage,visiblePageContent:"Saraswati Shishu Mandir public website and school ERP help."}})});
+  const data=await response.json().catch(()=>({}));
+  if(!response.ok)throw new Error(data.error||"AI सेवा अभी उपलब्ध नहीं है।");
+  const answer=String(data.answer||"").trim();if(!answer)throw new Error("AI ने खाली जवाब दिया।");
+  reply.textContent=answer;aiHistory.push({role:"assistant",content:answer});
+ }catch(err){reply.textContent="अभी AI जवाब नहीं दे पाया: "+(err.message||"कृपया थोड़ी देर बाद प्रयास करें।");aiHistory.pop();}
+ finally{field.disabled=false;if(send)send.disabled=false;field.focus();box.scrollTop=box.scrollHeight;}
+});
 
 // ERP navigation: module cards open descriptive detail screens.
 const moduleData=[
@@ -69,7 +88,7 @@ function showPortal(page){
 }
 function renderModules(items){
  const grid=$("moduleGrid");grid.innerHTML="";
- items.forEach(m=>{const b=document.createElement("button");b.className="module-card";b.dataset.module=m.id;const img=document.createElement("img");img.src=m.img;img.alt=m.title;img.loading="lazy";img.onerror=()=>img.style.display="none";const body=document.createElement("div");body.className="module-card-body";const h=document.createElement("h3");h.textContent=m.title;const p=document.createElement("p");p.textContent=m.desc;const s=document.createElement("span");s.className="module-status"+(m.ready?" ready":"");s.textContent=m.ready?"उपलब्ध: सीमित कार्य":"Setup Pending";body.append(h,p,s);b.append(img,body);grid.append(b)})
+ items.forEach(m=>{const b=document.createElement("button");b.className="module-card";b.dataset.module=m.id;const img=document.createElement("img");img.src=m.img;img.alt=m.title;img.loading="lazy";img.onerror=()=>img.style.display="none";const body=document.createElement("div");body.className="module-card-body";const h=document.createElement("h3");h.textContent=m.title;const p=document.createElement("p");p.textContent=m.desc;const s=document.createElement("span");s.className="module-status"+(m.ready?" ready":"");s.textContent=m.ready?"उपलब्ध: सीमित कार्य":"निर्माणाधीन — अभी सक्रिय नहीं";body.append(h,p,s);b.append(img,body);grid.append(b)})
 }
 function openModule(id){
  const m=moduleData.find(x=>x.id===id);if(!m)return;
@@ -96,7 +115,7 @@ const helpItems=[
 {id:"parenthelp",title:"Parent / अभिभावक गाइड",en:"Parent Guide",desc:"बच्चे की फीस, उपस्थिति और पढ़ाई।",body:"अभिभावक अपने खाते से जुड़े बच्चे की फीस, रसीद, उपस्थिति, होमवर्क और परिणाम देख सकेंगे।"},
 {id:"feeshelp",title:"Fees / फीस सहायता",en:"Fees Help",desc:"फीस, भुगतान और रसीद की जानकारी।",body:"फीस मॉड्यूल में विद्यार्थी चुनकर फीस विवरण, भुगतान और बकाया देखा जा सकेगा। ऑनलाइन भुगतान तभी उपलब्ध होगा जब सुरक्षित भुगतान गेटवे जोड़ा जाएगा।"},
 {id:"attendancehelp",title:"Attendance / उपस्थिति सहायता",en:"Attendance Help",desc:"विद्यार्थी और स्टाफ उपस्थिति।",body:"उपस्थिति में तारीख और कक्षा चुनकर रिकॉर्ड दर्ज/देखा जाएगा। गलत एंट्री के सुधार के लिए अधिकृत शिक्षक या प्रबंधन से संपर्क करें।"},
-{id:"chathelp",title:"AI Assistant",en:"AI Assistant",desc:"सामान्य सवालों के तुरंत जवाब।",body:"चैट असिस्टेंट में हिंदी या English में सवाल लिखें। वर्तमान संस्करण FAQ-आधारित है; निजी फीस/छात्र रिकॉर्ड नहीं दिखाता।"},
+{id:"chathelp",title:"AI Assistant",en:"AI Assistant",desc:"सामान्य सवालों के तुरंत जवाब।",body:"AI Assistant अब स्कूल वेबसाइट के सामान्य सवालों का जवाब देने के लिए सर्वर API से जुड़ा है। निजी फीस/छात्र रिकॉर्ड अभी नहीं दिखाता।"},
 {id:"accounthelp",title:"Login और सुरक्षा",en:"Login & Security",desc:"पासवर्ड, अकाउंट और डेटा सुरक्षा।",body:"अपना पासवर्ड साझा न करें। लॉगिन न हो तो ID जाँचें और विद्यालय प्रबंधन से पासवर्ड रीसेट करवाएँ। काम पूरा होने के बाद लॉगआउट करें।"}
 ];
 function renderHelpOptions(){
