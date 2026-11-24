@@ -1,4 +1,7 @@
 // Saraswati Shishu Mandir — Gemini server endpoint with safe diagnostics.
+function aiVoiceLanguagePrompt(lang){
+ return lang==="en-IN"?"Listen to the user's recorded voice question, understand it in English or another language, and answer in English. If speech is unclear, politely ask them to repeat.":"इस रिकॉर्ड की गई आवाज़ को ध्यान से सुनें। सवाल हिंदी या English में हो सकता है। सवाल समझकर हिंदी में जवाब दें। अगर आवाज़ स्पष्ट न हो तो दोबारा बोलने को कहें।";
+}
 export default async function handler(req,res){
  res.setHeader("Cache-Control","no-store");
  if(req.method!=="POST")return res.status(405).json({error:"Method not allowed"});
@@ -6,10 +9,18 @@ export default async function handler(req,res){
  try{
   const body=typeof req.body==="string"?JSON.parse(req.body):(req.body||{});
   const messages=Array.isArray(body.messages)?body.messages.slice(-12):[];
-  if(!messages.length||messages.some(m=>!["user","assistant"].includes(m.role)||typeof m.content!=="string"||m.content.length>1200))return res.status(400).json({error:"संदेश सही प्रारूप में भेजें।"});
+  const audioBase64=typeof body.audioBase64==="string"?body.audioBase64:"";
+  const mimeType=String(body.mimeType||"audio/webm").split(";")[0];
+  if(messages.some(m=>!["user","assistant"].includes(m.role)||typeof m.content!=="string"||m.content.length>1200))return res.status(400).json({error:"संदेश सही प्रारूप में भेजें।"});
+  if(!messages.length&&!audioBase64)return res.status(400).json({error:"सवाल लिखें या आवाज़ रिकॉर्ड करें।"});
+  if(audioBase64&&(audioBase64.length>2500000||!mimeType.startsWith("audio/")))return res.status(413).json({error:"आवाज़ की रिकॉर्डिंग बहुत बड़ी है या उसका प्रारूप सही नहीं है। 10–12 सेकंड में बोलें।"});
   const ctx=body.pageContext&&typeof body.pageContext==="object"?body.pageContext:{};
   const system="You are Saraswati AI, the bilingual Hindi/English assistant for Saraswati Shishu Mandir, Rasulpur, Mau, Uttar Pradesh. Always answer in the user's language, politely and simply. IMPORTANT CURRENT PAGE: "+String(ctx.page||"School website").slice(0,180)+". VISIBLE PAGE INFORMATION: "+String(ctx.visiblePageContent||"").slice(0,3500)+". Help detail: "+String(ctx.helpDetail||"").slice(0,1000)+". First interpret the user's question in the context of this current page. If the question is about this page, explain the exact visible controls and their purpose. If it concerns another school topic, help generally. Never invent school fees, dates, timings, staff names, policies, contact numbers, or actual student/payment records. For missing school-specific facts, say the office must confirm. Never claim you performed an action or accessed private data. Never request passwords, OTPs, full bank details, or sensitive information. Student-specific private information requires authorised login and verified access. Keep answers actionable and concise.";
   const contents=messages.map(m=>({role:m.role==="assistant"?"model":"user",parts:[{text:m.content}]}));
+  if(audioBase64){
+   const voicePrompt=aiVoiceLanguagePrompt(body.voiceLanguage);
+   contents.push({role:"user",parts:[{text:voicePrompt},{inline_data:{mime_type:mimeType,data:audioBase64}}]});
+  }
   const url="https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash-lite:generateContent?key="+encodeURIComponent(process.env.GEMINI_API_KEY);
   const response=await fetch(url,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({systemInstruction:{parts:[{text:system}]},contents,generationConfig:{temperature:0.35,maxOutputTokens:700}})});
   const data=await response.json().catch(()=>({}));
