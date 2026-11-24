@@ -254,11 +254,7 @@ openModule=function(id){if(id==="store"){openStorePage();$("moduleDetail").class
   const admin=$("adminPanel");
   const adminOpen=admin&&!admin.classList.contains("hidden");
   const page=detail|| (adminOpen?"Management Admin Panel":active?.textContent?.trim()) || document.title;
-  const heading=document.querySelector("main h1, main h2, main h3");
-  const visibleText=[...document.querySelectorAll("main h1,main h2,main h3,main p,main label,main button")]
-   .filter(el=>el.offsetParent!==null && !el.closest("#aiWidget"))
-   .slice(0,35).map(el=>el.textContent.trim()).filter(Boolean).join(" | ").slice(0,3500);
-  return {page:String(page).slice(0,180),helpDetail:helpText,visiblePageContent:visibleText};
+  return {page:String(page).slice(0,180),helpDetail:helpText,visiblePageContent:""};
  };
  const add=(text,kind)=>{const node=document.createElement("div");node.className="ai-msg "+(kind==="user"?"ai-user":"ai-bot");node.textContent=text;messages.appendChild(node);messages.scrollTop=messages.scrollHeight;return node;};
  const welcome=()=>{history=[];messages.innerHTML="";const node=document.createElement("div");node.className="ai-msg ai-bot";node.textContent="नमस्ते! मैं Saraswati AI हूँ। आप जिस पेज पर हैं, उसी के अनुसार मदद करूँगा। अपना सवाल हिंदी या English में पूछें।";messages.appendChild(node);};
