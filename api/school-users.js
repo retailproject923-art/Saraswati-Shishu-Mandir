@@ -1,13 +1,13 @@
 // Secure school account creation and User-ID login.
-// Requires SUPABASE_SERVICE_ROLE_KEY in Vercel Production. Never expose this key in the browser.
+// Requires SUPABASE_SECRET_KEY in Vercel Production. Never expose this key in the browser.
 const SUPABASE_URL="https://gnyhushvxqquvxepkinw.supabase.co";
 const SUPABASE_ANON_KEY="sb_publishable_lrP4onruHeKnZwgkeBjUPg_Yk3ik6-7";
 const json=(res,status,body)=>res.status(status).json(body);
 export default async function handler(req,res){
  res.setHeader("Cache-Control","no-store");
  if(req.method!=="POST")return json(res,405,{error:"Method not allowed"});
- const service=process.env.SUPABASE_SERVICE_ROLE_KEY;
- if(!service)return json(res,503,{error:"Management account setup pending: Vercel Production में SUPABASE_SERVICE_ROLE_KEY जोड़ना बाकी है।"});
+ const service=process.env.SUPABASE_SECRET_KEY;
+ if(!service)return json(res,503,{error:"Management account setup pending: Vercel Production में SUPABASE_SECRET_KEY जोड़ना बाकी है।"});
  try{
   const body=typeof req.body==="string"?JSON.parse(req.body):(req.body||{});
   const action=String(body.action||"");
