@@ -184,14 +184,37 @@ const moduleData=[
 ];
 const navGroups={home:null,management:"management",students:"students",teachers:"teachers",fees:"fees",store:"store",attendance:"attendance",reports:"reports"};
 const navLabels={management:"Management",students:"Students",teachers:"Teachers",fees:"Fees & Accounts",attendance:"Attendance",reports:"Reports",store:"School Store"};
+async function renderDonationPage(){
+ const host=$("donationPaymentOptions");
+ host.innerHTML="<p>भुगतान विवरण लोड हो रहा है…</p>";
+ const {data,error}=await client.from("school_payment_accounts").select("account_holder,bank_name,account_number,ifsc_code,upi_id,qr_image_url,payment_instructions").eq("is_active",true).order("updated_at",{ascending:false});
+ if(error){host.textContent="भुगतान विवरण अभी उपलब्ध नहीं हैं। विद्यालय प्रबंधन से संपर्क करें।";return}
+ if(!data?.length){host.textContent="विद्यालय ने अभी दान के लिए बैंक/UPI विवरण प्रकाशित नहीं किए हैं।";return}
+ host.innerHTML=data.map(a=>`<article class="payment-public-card"><h3>${escapeHtml(a.bank_name)}</h3><p><b>खाताधारक:</b> ${escapeHtml(a.account_holder)}</p><p><b>अकाउंट नंबर:</b> ${escapeHtml(a.account_number)}</p><p><b>IFSC:</b> ${escapeHtml(a.ifsc_code||"—")}</p><p><b>UPI ID:</b> ${escapeHtml(a.upi_id||"—")}</p>${a.qr_image_url?`<img class="payment-qr" src="${escapeAttr(a.qr_image_url)}" alt="विद्यालय दान QR" loading="lazy">`:""}<p>${escapeHtml(a.payment_instructions||"दान करने से पहले प्राप्तकर्ता विवरण की पुष्टि करें।")}</p><div class="donation-upi-link" data-upi="${escapeAttr(a.upi_id||"")}" data-holder="${escapeAttr(a.account_holder)}"></div></article>`).join("");
+}
+$("donationForm")?.addEventListener("submit",e=>{
+ e.preventDefault();
+ const amount=Number($("donationAmount").value);
+ const purpose=$("donationPurpose").value;
+ const name=$("donorName").value.trim();
+ if(!Number.isFinite(amount)||amount<1){$("donationStatus").textContent="कृपया सही राशि भरें।";return}
+ const links=$("donationPaymentOptions").querySelectorAll(".donation-upi-link");
+ let count=0;
+ links.forEach(el=>{
+  const upi=el.dataset.upi;if(!upi)return;
+  const params=new URLSearchParams({pa:upi,pn:el.dataset.holder||"Saraswati Shishu Mandir",am:amount.toFixed(2),cu:"INR",tn:"Donation - "+purpose+(name?" - "+name:"")});
+  const a=document.createElement("a");a.className="primary donation-pay";a.href="upi://pay?"+params.toString();a.textContent="UPI ऐप से ₹"+amount+" दान करें";el.append(a);count++;
+ });
+ $("donationStatus").textContent=count?"UPI भुगतान लिंक तैयार है। QR स्कैन करके भी भुगतान कर सकते हैं।":"ऑनलाइन UPI ID उपलब्ध नहीं है। ऊपर दिए बैंक/QR विवरण से भुगतान करें।";
+});
 function showPortal(page){
  document.querySelectorAll(".nav-item").forEach(b=>b.classList.toggle("active",b.dataset.page===page));
- const home=page==="home";
+ const home=page==="home";\n const donation=page==="donation";\n $("donationPage")?.classList.toggle("hidden",!donation);
  $("modulePortal").classList.toggle("hidden",home||page==="help");
  $("helpPortal").classList.toggle("hidden",page!=="help");
  ["adsSection","notices","help","assistant","adminPanel"].forEach(id=>{const el=$(id);if(el)el.classList.add("hidden")});
  if(home){$("adsSection").classList.remove("hidden");$("notices").classList.remove("hidden");$("help").classList.add("hidden");}
- if(page==="help"){renderHelpOptions();$("helpPortal").scrollIntoView({behavior:"smooth"});return}
+ if(page==="help"){renderHelpOptions();$("helpPortal").scrollIntoView({behavior:"smooth"});return}\n if(donation){renderDonationPage();$("donationPage").scrollIntoView({behavior:"smooth"});return}
  if(!home){$("portalTitle").textContent=navLabels[page]||"School Systems";$("portalIntro").textContent="किसी सिस्टम पर टैप करें। उसकी जानकारी, उपयोग और उपलब्धता खुलेगी।";renderModules(moduleData.filter(m=>m.group===navGroups[page]));$("modulePortal").scrollIntoView({behavior:"smooth"})}
 }
 function renderModules(items){
