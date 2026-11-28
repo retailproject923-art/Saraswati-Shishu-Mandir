@@ -30,20 +30,30 @@ module.exports = async function handler(req,res){
   // Primary model plus automatic fallback for temporary capacity errors.
   const modelCandidates=["gemini-3.5-flash-lite","gemini-3.1-flash-lite","gemini-3.8-flash"];
   let response,data={},activeModel="";
-  for(const model of modelCandidates){
+  for(let modelIndex=0;modelIndex<modelCandidates.length;modelIndex++){
+   const model=modelCandidates[modelIndex];
    activeModel=model;
    const url="https://generativelanguage.googleapis.com/v1beta/models/"+model+":generateContent";
-   response=await fetch(url,{method:"POST",headers:{"Content-Type":"application/json","x-goog-api-key":process.env.GEMINI_API_KEY},body:JSON.stringify({systemInstruction:{parts:[{text:system}]},contents,generationConfig:{temperature:0.25,maxOutputTokens:500}}),signal:AbortSignal.timeout(7500)});
-   data=await response.json().catch(()=>({}));
-   if(response.ok){console.info("Gemini response received",model,response.status);break;}
-   const status=response.status;
-   const detail=String(data?.error?.message||"").slice(0,300);
-   console.error("Gemini model request failed",model,status,data?.error?.status||"",detail);
-   if((status===503||status===429)&&model!==modelCandidates[modelCandidates.length-1]){
-    console.warn("Trying backup Gemini model after temporary capacity/quota response.");
-    continue;
+   try{
+    response=await fetch(url,{method:"POST",headers:{"Content-Type":"application/json","x-goog-api-key":process.env.GEMINI_API_KEY},body:JSON.stringify({systemInstruction:{parts:[{text:system}]},contents,generationConfig:{temperature:0.25,maxOutputTokens:500}}),signal:AbortSignal.timeout(10000)});
+    data=await response.json().catch(()=>({}));
+    if(response.ok){console.info("Gemini response received",model,response.status);break;}
+    const status=response.status;
+    const detail=String(data?.error?.message||"").slice(0,300);
+    console.error("Gemini model request failed",model,status,data?.error?.status||"",detail);
+    if((status===503||status===429)&&modelIndex<modelCandidates.length-1){
+     console.warn("Trying backup Gemini model after temporary capacity/quota response.");
+     continue;
+    }
+    break;
+   }catch(modelError){
+    console.warn("Gemini model attempt timed out or network failed",model,String(modelError?.message||modelError).slice(0,200));
+    if(modelIndex<modelCandidates.length-1){
+     console.warn("Trying next Gemini model after timeout/network failure.");
+     continue;
+    }
+    throw modelError;
    }
-   break;
   }
   if(!response.ok){
    const status=response.status;
