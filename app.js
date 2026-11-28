@@ -154,7 +154,7 @@ $("chatForm").addEventListener("submit",async e=>{
   const response=await fetch("/api/chat",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({messages:aiHistory.slice(-12),pageContext:{page:activePage,visiblePageContent:"Saraswati Shishu Mandir public website and school ERP help."}})});
   const data=await response.json().catch(()=>({}));
   if(!response.ok)throw new Error(data.error||"AI सेवा अभी उपलब्ध नहीं है।");
-  const answer=String(data.answer||"").trim();if(!answer)throw new Error("AI ने खाली जवाब दिया।");
+  const answer=cleanAIAnswer(data.answer);if(!answer)throw new Error("AI ने खाली जवाब दिया।");
   reply.textContent=answer;aiHistory.push({role:"assistant",content:answer});
  }catch(err){reply.textContent="अभी AI जवाब नहीं दे पाया: "+(err.message||"कृपया थोड़ी देर बाद प्रयास करें।");aiHistory.pop();}
  finally{field.disabled=false;if(send)send.disabled=false;field.focus();box.scrollTop=box.scrollHeight;}
@@ -391,10 +391,24 @@ function addFloatingAIMessage(role,text){
  aiMessages.scrollTop=aiMessages.scrollHeight;
  return node;
 }
+function cleanAIAnswer(text){
+ return String(text||"")
+  .replace(/```[\\s\\S]*?```/g," code block omitted ")
+  .replace(/\\[([^\\]]+)\\]\\((?:https?:\\/\\/[^)]+)\\)/g,"$1")
+  .replace(/(^|\\s)#{1,6}\\s*/g,"$1")
+  .replace(/\\*{1,3}([^*]+)\\*{1,3}/g,"$1")
+  .replace(/_{1,2}([^_]+)_{1,2}/g,"$1")
+  .replace(/[\\*`_~]/g,"")
+  .replace(/^[\\s•▪◦*-]+/gm,"")
+  .replace(/\\s{2,}/g," ")
+  .trim();
+}
 function speakSaraswatiAnswer(text){
  if(!("speechSynthesis" in window)){if(aiVoiceStatus)aiVoiceStatus.textContent="इस ब्राउज़र में बोलकर सुनाने की सुविधा उपलब्ध नहीं है।";return}
  window.speechSynthesis.cancel();
- const utterance=new SpeechSynthesisUtterance(String(text||""));
+ const spoken=cleanAIAnswer(text);
+ if(!spoken)return;
+ const utterance=new SpeechSynthesisUtterance(spoken);
  utterance.lang=/[ऀ-ॿ]/.test(utterance.text)?"hi-IN":"en-IN";
  utterance.rate=0.95;
  window.speechSynthesis.speak(utterance);
@@ -493,7 +507,7 @@ $("aiLauncher")?.addEventListener("click",openFloatingAI);
 $("aiMinimize")?.addEventListener("click",()=>aiWindow?.classList.add("hidden"));
 $("aiClear")?.addEventListener("click",()=>{
  floatingAIHistory.length=0;
- if(aiMessages)aiMessages.innerHTML='<div class="ai-msg ai-bot"><b>नमस्ते! 🙏</b><br>मैं Saraswati AI हूँ। स्कूल और वेबसाइट से जुड़े सवाल पूछें।</div>';
+ if(aiMessages)aiMessages.innerHTML='<div class="ai-msg ai-bot"><b>नमस्ते! 🙏</b><br>मैं रीसीका मिश्रा हूँ। स्कूल और वेबसाइट से जुड़े सवाल पूछें।</div>';
 });
 document.querySelectorAll("[data-ai-prompt]").forEach(button=>button.addEventListener("click",()=>{
  if(!aiInput||!aiForm)return;
