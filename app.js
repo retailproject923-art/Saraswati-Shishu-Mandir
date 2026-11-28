@@ -269,12 +269,13 @@ function openModule(id){
  const m=moduleData.find(x=>x.id===id);if(!m)return;
  const host=$("detailContent");host.innerHTML="";
  const eyebrow=document.createElement("span");eyebrow.className="eyebrow";eyebrow.textContent="SCHOOL ERP MODULE";
- const title=document.createElement("h2");title.textContent=m.title+" / "+m.en;
- const desc=document.createElement("p");desc.textContent=m.desc;
+ const english=document.documentElement.lang==="en";
+ const title=document.createElement("h2");title.textContent=english?(m.en||m.title):m.title;
+ const desc=document.createElement("p");desc.textContent=english?(schoolHiToEn[m.desc]||m.desc):m.desc;
  const img=document.createElement("img");img.className="detail-hero";img.src=m.img;img.alt=m.title;img.onerror=()=>img.style.display="none";
- const h=document.createElement("h3");h.textContent="इस सिस्टम को खोलने से क्या होगा?";
- const ul=document.createElement("ul");m.what.forEach(x=>{const li=document.createElement("li");li.textContent=x;ul.append(li)});
- const status=document.createElement("p");status.textContent="वर्तमान स्थिति: "+m.status+".";
+ const h=document.createElement("h3");h.textContent=english?"What can you do in this system?":"इस सिस्टम को खोलने से क्या होगा?";
+ const ul=document.createElement("ul");m.what.forEach(x=>{const li=document.createElement("li");li.textContent=english?(schoolHiToEn[x]||x):x;ul.append(li)});
+ const status=document.createElement("p");status.textContent=(english?"Current status: ":"वर्तमान स्थिति: ")+(english?(schoolHiToEn[m.status]||m.status):m.status)+".";
  const note=document.createElement("p");note.textContent="यह पेज अभी मॉड्यूल की जानकारी दिखाता है। वास्तविक रिकॉर्ड जोड़ने/बदलने की सुविधा तैयार और टेस्ट होने के बाद ही सक्रिय होगी।";
  const close=document.createElement("button");close.className="outline";close.textContent="वापस जाएँ";close.addEventListener("click",closeModule);
  host.append(eyebrow,title,desc,img,h,ul,status,note,close);
