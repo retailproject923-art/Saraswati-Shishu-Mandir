@@ -208,7 +208,7 @@ $("chatForm").addEventListener("submit",async e=>{
  aiHistory.push({role:"user",content:question});
  try{
   const activePage=document.querySelector(".nav-item.active")?.dataset.page||"home";
-  const response=await fetch("/api/chat",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({messages:aiHistory.slice(-6),preferredLanguage:localStorage.getItem("school_ui_language")==="en"?"en":"hi",pageContext:{page:activePage,visiblePageContent:"Saraswati Shishu Mandir public website and school ERP help."}}),signal:AbortSignal.timeout(25000)});
+  const response=await fetch("/api/chat",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({messages:aiHistory.slice(-6),preferredLanguage:localStorage.getItem("school_ui_language")==="en"?"en":"hi",pageContext:{page:activePage,visiblePageContent:"Saraswati Shishu Mandir public website and school ERP help."}}),signal:AbortSignal.timeout(35000)});
   const data=await response.json().catch(()=>({}));
   if(!response.ok)throw new Error(data.error||"AI सेवा अभी उपलब्ध नहीं है।");
   const answer=cleanAIAnswer(data.answer);if(!answer)throw new Error("AI ने खाली जवाब दिया।");
@@ -621,7 +621,7 @@ aiForm?.addEventListener("submit",async event=>{
  floatingAIHistory.push({role:"user",content:question});
  try{
   const activePage=document.querySelector(".nav-item.active")?.dataset.page||"home";
-  const response=await fetch("/api/chat",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({messages:floatingAIHistory.slice(-6),preferredLanguage:localStorage.getItem("school_ui_language")==="en"?"en":"hi",pageContext:{page:activePage,visiblePageContent:"Saraswati Shishu Mandir, Rasulpur, Mau school website. Main areas: Home, Management, Students, Teachers, Fees & Accounts, School Store, Attendance, Reports, Help."}}),signal:AbortSignal.timeout(25000)});
+  const response=await fetch("/api/chat",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({messages:floatingAIHistory.slice(-6),preferredLanguage:localStorage.getItem("school_ui_language")==="en"?"en":"hi",pageContext:{page:activePage,visiblePageContent:"Saraswati Shishu Mandir, Rasulpur, Mau school website. Main areas: Home, Management, Students, Teachers, Fees & Accounts, School Store, Attendance, Reports, Help."}}),signal:AbortSignal.timeout(35000)});
   const data=await response.json().catch(()=>({}));
   if(!response.ok)throw new Error(data.error||"AI सेवा अभी उपलब्ध नहीं है।");
   const answer=fixReesikaName(String(data.answer||"").trim());
