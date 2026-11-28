@@ -187,7 +187,7 @@ $("chatForm").addEventListener("submit",async e=>{
  aiHistory.push({role:"user",content:question});
  try{
   const activePage=document.querySelector(".nav-item.active")?.dataset.page||"home";
-  const response=await fetch("/api/chat",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({messages:aiHistory.slice(-12),preferredLanguage:localStorage.getItem("school_ui_language")==="en"?"en":"hi",pageContext:{page:activePage,visiblePageContent:"Saraswati Shishu Mandir public website and school ERP help."}})});
+  const response=await fetch("/api/chat",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({messages:aiHistory.slice(-6),preferredLanguage:localStorage.getItem("school_ui_language")==="en"?"en":"hi",pageContext:{page:activePage,visiblePageContent:"Saraswati Shishu Mandir public website and school ERP help."}}),signal:AbortSignal.timeout(25000)});
   const data=await response.json().catch(()=>({}));
   if(!response.ok)throw new Error(data.error||"AI सेवा अभी उपलब्ध नहीं है।");
   const answer=cleanAIAnswer(data.answer);if(!answer)throw new Error("AI ने खाली जवाब दिया।");
@@ -555,11 +555,11 @@ aiForm?.addEventListener("submit",async event=>{
  aiInput.value="";
  aiInput.disabled=true;
  if(send)send.disabled=true;
- const pending=addFloatingAIMessage("assistant","जवाब तैयार हो रहा है…");
+ const pending=addFloatingAIMessage("assistant",localStorage.getItem("school_ui_language")==="en"?"Preparing your answer…":"जवाब तैयार हो रहा है…");
  floatingAIHistory.push({role:"user",content:question});
  try{
   const activePage=document.querySelector(".nav-item.active")?.dataset.page||"home";
-  const response=await fetch("/api/chat",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({messages:floatingAIHistory.slice(-12),preferredLanguage:localStorage.getItem("school_ui_language")==="en"?"en":"hi",pageContext:{page:activePage,visiblePageContent:"Saraswati Shishu Mandir, Rasulpur, Mau school website. Main areas: Home, Management, Students, Teachers, Fees & Accounts, School Store, Attendance, Reports, Help."}})});
+  const response=await fetch("/api/chat",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({messages:floatingAIHistory.slice(-6),preferredLanguage:localStorage.getItem("school_ui_language")==="en"?"en":"hi",pageContext:{page:activePage,visiblePageContent:"Saraswati Shishu Mandir, Rasulpur, Mau school website. Main areas: Home, Management, Students, Teachers, Fees & Accounts, School Store, Attendance, Reports, Help."}}),signal:AbortSignal.timeout(25000)});
   const data=await response.json().catch(()=>({}));
   if(!response.ok)throw new Error(data.error||"AI सेवा अभी उपलब्ध नहीं है।");
   const answer=String(data.answer||"").trim();
@@ -575,7 +575,7 @@ aiForm?.addEventListener("submit",async event=>{
   speakSaraswatiAnswer(answer);
   floatingAIHistory.push({role:"assistant",content:answer});
  }catch(error){
-  if(pending)pending.textContent="अभी जवाब नहीं मिला: "+(error.message||"कृपया थोड़ी देर बाद फिर प्रयास करें।");
+  if(pending)pending.textContent=(localStorage.getItem("school_ui_language")==="en"?"No answer yet: ":"अभी जवाब नहीं मिला: ")+(error.message||(localStorage.getItem("school_ui_language")==="en"?"Please try again shortly.":"कृपया थोड़ी देर बाद फिर प्रयास करें।"));
   floatingAIHistory.pop();
  }finally{
   aiInput.disabled=false;
