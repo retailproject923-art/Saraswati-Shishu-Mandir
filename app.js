@@ -149,7 +149,7 @@ function translateWholePage(lang){
   const original=node.__schoolOriginalText;
   const trimmed=original.trim();
   const translated=map[trimmed];
-  if(translated!==undefined){const lead=original.match(/^\\s*/)?.[0]||"";const tail=original.match(/\\s*$/)?.[0]||"";const output=lead+translated+tail;if(node.nodeValue!==output)node.nodeValue=output;}
+  if(translated!==undefined){const lead=original.match(/^\s*/)?.[0]||"";const tail=original.match(/\s*$/)?.[0]||"";const output=lead+translated+tail;if(node.nodeValue!==output)node.nodeValue=output;}
   node.__schoolLastText=node.nodeValue;
  }
  document.querySelectorAll("[placeholder],[aria-label],[title],img[alt]").forEach(el=>{
