@@ -393,14 +393,13 @@ function addFloatingAIMessage(role,text){
 }
 function cleanAIAnswer(text){
  return String(text||"")
-  .replace(/```[\\s\\S]*?```/g," code block omitted ")
-  .replace(/\\[([^\\]]+)\\]\\((?:https?:\\/\\/[^)]+)\\)/g,"$1")
-  .replace(/(^|\\s)#{1,6}\\s*/g,"$1")
-  .replace(/\\*{1,3}([^*]+)\\*{1,3}/g,"$1")
+  .replace(/\[([^\]]+)\]\((?:https?:\/\/[^)]+)\)/g,"$1")
+  .replace(/(^|\s)#{1,6}\s*/g,"$1")
+  .replace(/\*{1,3}([^*]+)\*{1,3}/g,"$1")
   .replace(/_{1,2}([^_]+)_{1,2}/g,"$1")
-  .replace(/[\\*`_~]/g,"")
-  .replace(/^[\\s•▪◦*-]+/gm,"")
-  .replace(/\\s{2,}/g," ")
+  .replace(/[\*_\x60~]/g,"")
+  .replace(/^[\s•▪◦*-]+/gm,"")
+  .replace(/\s{2,}/g," ")
   .trim();
 }
 function speakSaraswatiAnswer(text){
