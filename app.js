@@ -478,7 +478,7 @@ function renderAIAnswer(container,raw){
   const img=document.createElement("img");img.className="india-map-asset";img.src="/india-map.svg";img.alt="भारत की रूपरेखा तथा राज्यों और केंद्र शासित प्रदेशों की सीमाएँ";img.loading="eager";img.decoding="async";
   img.addEventListener("error",()=>{const note=document.createElement("p");note.textContent="भारत का मानचित्र अभी लोड नहीं हो पाया। कृपया पेज रीफ़्रेश करें।";fig.appendChild(note)},{once:true});
   fig.appendChild(img);
-  const credit=document.createElement("small");credit.className="india-map-credit";credit.textContent="शैक्षिक मानचित्र • सीमाओं के आधिकारिक उपयोग हेतु Survey of India से मिलान करें।";fig.appendChild(credit);
+  const credit=document.createElement("small");credit.className="india-map-credit";credit.textContent="मानचित्र डेटा: Abhinav Swami (MIT) • शैक्षिक उपयोग; आधिकारिक सीमाओं हेतु Survey of India से मिलान करें।";fig.appendChild(credit);
   container.appendChild(fig);
  };
  const renderChart=(c)=>{
