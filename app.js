@@ -452,18 +452,42 @@ function addFloatingAIMessage(role,text){
  return node;
 }
 function renderAIAnswer(container,raw){
- if(!container)return;const answer=fixReesikaName(String(raw||""));container.innerHTML="";
- const re=/```chart\\s*([\\s\\S]*?)```/gi;let last=0,m;
- const addText=(txt)=>{txt.split(/\\n{2,}/).forEach(line=>{line=line.trim();if(!line)return;
-  const im=line.match(/^!\\[([^\\]]*)\\]\\((https:\\/\\/[^\\s)]+)\\)$/);
-  if(im){const fig=document.createElement("figure"),img=document.createElement("img");fig.className="ai-answer-image";img.src=im[2];img.alt=im[1]||"Illustration";img.loading="lazy";img.referrerPolicy="no-referrer";fig.appendChild(img);if(im[1]){const cap=document.createElement("figcaption");cap.textContent=im[1];fig.appendChild(cap)}container.appendChild(fig);return}
-  const p=document.createElement("p");p.textContent=cleanAIAnswer(line);container.appendChild(p);});};
- while((m=re.exec(answer))){addText(answer.slice(last,m.index));try{const c=JSON.parse(m[1]),labels=(c.labels||[]).slice(0,8),vals=(c.values||[]).slice(0,8).map(Number);
-  if(!labels.length||labels.length!==vals.length||!vals.every(Number.isFinite))throw Error();
-  const fig=document.createElement("figure"),title=document.createElement("figcaption");fig.className="ai-answer-chart";title.textContent=c.title||"Graph";fig.appendChild(title);
-  const max=Math.max(1,...vals);labels.forEach((label,i)=>{const row=document.createElement("div");row.className="ai-chart-row";const name=document.createElement("span");name.textContent=String(label).slice(0,24);const track=document.createElement("div");track.className="ai-chart-track";const bar=document.createElement("div");bar.className="ai-chart-bar";bar.style.width=Math.max(0,Math.min(100,vals[i]/max*100))+"%";track.appendChild(bar);const value=document.createElement("b");value.textContent=String(vals[i]);row.append(name,track,value);fig.appendChild(row)});container.appendChild(fig);
- }catch{addText("Graph could not be displayed; please see the values in the answer.")}last=re.lastIndex;}
- addText(answer.slice(last));
+ if(!container)return;
+ const answer=fixReesikaName(String(raw||"")),tick=String.fromCharCode(96).repeat(3);
+ container.innerHTML="";
+ const addText=(txt)=>{txt.split("\n\n").forEach(line=>{
+  line=line.trim();if(!line)return;
+  if(line.startsWith("![")&&line.endsWith(")")){
+   const split=line.indexOf("]("),url=line.slice(split+2,-1),alt=line.slice(2,split);
+   if(split>0&&url.startsWith("https://")){
+    const fig=document.createElement("figure"),img=document.createElement("img");fig.className="ai-answer-image";img.src=url;img.alt=alt||"Illustration";img.loading="lazy";img.referrerPolicy="no-referrer";fig.appendChild(img);
+    if(alt){const cap=document.createElement("figcaption");cap.textContent=alt;fig.appendChild(cap)}container.appendChild(fig);return;
+   }
+  }
+  const p=document.createElement("p");p.textContent=cleanAIAnswer(line);container.appendChild(p);
+ });};
+ let pos=0,marker=tick+"chart";
+ while(true){
+  const at=answer.indexOf(marker,pos);if(at<0)break;
+  const dataStart=at+marker.length,close=answer.indexOf(tick,dataStart);if(close<0)break;
+  addText(answer.slice(pos,at));
+  try{
+   const c=JSON.parse(answer.slice(dataStart,close).trim()),labels=(c.labels||[]).slice(0,8),vals=(c.values||[]).slice(0,8).map(Number);
+   if(!labels.length||labels.length!==vals.length||!vals.every(Number.isFinite))throw Error("invalid chart");
+   const fig=document.createElement("figure"),title=document.createElement("figcaption");fig.className="ai-answer-chart";title.textContent=c.title||"Graph";fig.appendChild(title);
+   const max=Math.max(1,...vals);
+   labels.forEach((label,i)=>{
+    const row=document.createElement("div");row.className="ai-chart-row";
+    const name=document.createElement("span");name.textContent=String(label).slice(0,24);
+    const track=document.createElement("div");track.className="ai-chart-track";
+    const bar=document.createElement("div");bar.className="ai-chart-bar";bar.style.width=Math.max(0,Math.min(100,vals[i]/max*100))+"%";track.appendChild(bar);
+    const value=document.createElement("b");value.textContent=String(vals[i]);row.append(name,track,value);fig.appendChild(row);
+   });
+   container.appendChild(fig);
+  }catch{addText("Graph could not be displayed; please see the values in the answer.");}
+  pos=close+tick.length;
+ }
+ addText(answer.slice(pos));
 }
 function cleanAIAnswer(text){
  return String(text||"")
