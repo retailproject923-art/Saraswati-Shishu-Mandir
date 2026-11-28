@@ -434,7 +434,7 @@ async function sendVoiceToAI(blob){
   const response=await fetch("/api/chat",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({messages:floatingAIHistory.slice(-10),audioBase64,mimeType:blob.type||"audio/webm",voiceLanguage:aiVoiceLanguage,pageContext:{page:activePage,visiblePageContent:"Saraswati Shishu Mandir, Rasulpur, Mau school website."}})});
   const data=await response.json().catch(()=>({}));
   if(!response.ok)throw new Error(data.error||"Voice AI अभी जवाब नहीं दे सका।");
-  const answer=String(data.answer||"").trim();if(!answer)throw new Error("आवाज़ का जवाब खाली मिला।");
+  const answer=cleanAIAnswer(data.answer);if(!answer)throw new Error("आवाज़ का जवाब खाली मिला।");
   if(pending){pending.textContent=answer;const b=document.createElement("button");b.type="button";b.className="ai-speak-button";b.textContent="🔊 जवाब सुनें";b.addEventListener("click",()=>speakSaraswatiAnswer(answer));pending.append(document.createElement("br"),b)}
   floatingAIHistory.push({role:"assistant",content:answer});
   if(aiVoiceStatus)aiVoiceStatus.textContent="जवाब मिल गया। नीचे 🔊 जवाब सुनें दबाएँ।";
