@@ -475,13 +475,11 @@ function renderAIAnswer(container,raw){
  const renderIndiaMap=()=>{
   const fig=document.createElement("figure");fig.className="ai-answer-chart ai-india-map";
   const title=document.createElement("figcaption");title.textContent="भारत का मानचित्र";fig.appendChild(title);
-  const svg=document.createElementNS("http://www.w3.org/2000/svg","svg");svg.setAttribute("viewBox","0 0 300 340");svg.setAttribute("role","img");svg.setAttribute("aria-label","भारत का रूपरेखात्मक मानचित्र");
-  const path=document.createElementNS(svg.namespaceURI,"path");
-  path.setAttribute("d","M92 18 L112 29 L126 25 L138 40 L158 47 L174 64 L195 76 L213 93 L226 111 L215 124 L205 137 L198 151 L187 166 L177 182 L171 201 L163 218 L154 238 L143 259 L132 279 L121 302 L111 285 L106 266 L97 247 L89 227 L78 209 L67 191 L57 173 L48 154 L39 135 L30 118 L42 104 L51 91 L58 76 L65 61 L74 48 L78 34 Z");
-  path.setAttribute("fill","#f4d9a5");path.setAttribute("stroke","#7b2d26");path.setAttribute("stroke-width","4");path.setAttribute("stroke-linejoin","round");
-  svg.appendChild(path);
-  const label=document.createElementNS(svg.namespaceURI,"text");label.setAttribute("x","150");label.setAttribute("y","324");label.setAttribute("text-anchor","middle");label.setAttribute("font-size","13");label.setAttribute("fill","#7b2d26");label.textContent="भारत • रूपरेखात्मक";svg.appendChild(label);
-  fig.appendChild(svg);container.appendChild(fig);
+  const img=document.createElement("img");img.className="india-map-asset";img.src="/india-map.svg";img.alt="भारत की रूपरेखा तथा राज्यों और केंद्र शासित प्रदेशों की सीमाएँ";img.loading="eager";img.decoding="async";
+  img.addEventListener("error",()=>{const note=document.createElement("p");note.textContent="भारत का मानचित्र अभी लोड नहीं हो पाया। कृपया पेज रीफ़्रेश करें।";fig.appendChild(note)},{once:true});
+  fig.appendChild(img);
+  const credit=document.createElement("small");credit.className="india-map-credit";credit.textContent="शैक्षिक मानचित्र • सीमाओं के आधिकारिक उपयोग हेतु Survey of India से मिलान करें।";fig.appendChild(credit);
+  container.appendChild(fig);
  };
  const renderChart=(c)=>{
   const labels=(c.labels||[]).slice(0,8),vals=(c.values||[]).slice(0,8).map(Number);
