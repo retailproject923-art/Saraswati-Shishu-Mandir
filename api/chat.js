@@ -28,14 +28,14 @@ module.exports = async function handler(req,res){
    contents.push({role:"user",parts:[{text:voicePrompt},{inline_data:{mime_type:mimeType,data:audioBase64}}]});
   }
   // Primary model plus automatic fallback for temporary capacity errors.
-  const modelCandidates=["gemini-3.1-flash-lite","gemini-3.8-flash"];
+  const modelCandidates=["gemini-3.5-flash-lite","gemini-3.1-flash-lite","gemini-3.8-flash"];
   let response,data={},activeModel="";
   for(const model of modelCandidates){
    activeModel=model;
    const url="https://generativelanguage.googleapis.com/v1beta/models/"+model+":generateContent";
    response=await fetch(url,{method:"POST",headers:{"Content-Type":"application/json","x-goog-api-key":process.env.GEMINI_API_KEY},body:JSON.stringify({systemInstruction:{parts:[{text:system}]},contents,generationConfig:{temperature:0.25,maxOutputTokens:500}}),signal:AbortSignal.timeout(22000)});
    data=await response.json().catch(()=>({}));
-   if(response.ok)break;
+   if(response.ok){console.info("Gemini response received",model,response.status);break;}
    const status=response.status;
    const detail=String(data?.error?.message||"").slice(0,300);
    console.error("Gemini model request failed",model,status,data?.error?.status||"",detail);
@@ -50,7 +50,7 @@ module.exports = async function handler(req,res){
    if(status===400||status===403)return res.status(502).json({error:"Gemini ने API Key या API अनुमति अस्वीकार की है। Google AI Studio में इसी Key और Generative Language API की अनुमति जाँचें।"});
    if(status===404)return res.status(502).json({error:"Gemini का उपलब्ध मॉडल नहीं मिला। API मॉडल की उपलब्धता जाँचनी होगी।"});
    if(status===429)return res.status(429).json({error:"Gemini की अनुरोध सीमा/कोटा पूरी हो गई है। कुछ देर बाद फिर प्रयास करें।"});
-   if(status===503)return res.status(503).json({error:"Gemini के दोनों मॉडल अभी व्यस्त हैं। कुछ देर बाद फिर प्रयास करें।"});
+   if(status===503)return res.status(503).json({error:"Gemini के सभी उपलब्ध मॉडल अभी व्यस्त हैं। कृपया थोड़ी देर बाद फिर प्रयास करें।"});
    return res.status(502).json({error:"Gemini सर्वर ने अनुरोध अस्वीकार किया (HTTP "+status+")। कृपया बाद में प्रयास करें।"});
   }
   const answer=data?.candidates?.[0]?.content?.parts?.map(p=>p.text||"").join("").trim();
