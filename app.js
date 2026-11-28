@@ -456,8 +456,8 @@ function renderAIAnswer(container,raw){
  const answer=fixRishikaName(String(raw||"")),tick=String.fromCharCode(96).repeat(3);
  container.replaceChildren();
  const addText=(txt)=>{
-  const imagePattern=/!\\[([^\\]]*)\\]\\((https:\\/\\/[^\\s)]+)\\)/g;
-  txt.split(/\\n\\n+/).forEach(line=>{
+  const imagePattern=/!\[([^\]]*)\]\((https:\/\/[^\s)]+)\)/g;
+  txt.split(/\n\n+/).forEach(line=>{
    line=line.trim();if(!line)return;
    let cursor=0,match;
    while((match=imagePattern.exec(line))){
