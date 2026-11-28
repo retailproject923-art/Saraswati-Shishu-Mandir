@@ -148,7 +148,7 @@ function translateWholePage(lang){
   if(node.__schoolOriginalText===undefined)node.__schoolOriginalText=node.nodeValue;
   const original=node.__schoolOriginalText;
   const trimmed=original.trim();
-  const translated=map[trimmed];
+  const translated=map[trimmed]??trimmed;
   if(translated!==undefined){const lead=original.match(/^\s*/)?.[0]||"";const tail=original.match(/\s*$/)?.[0]||"";const output=lead+translated+tail;if(node.nodeValue!==output)node.nodeValue=output;}
   node.__schoolLastText=node.nodeValue;
  }
