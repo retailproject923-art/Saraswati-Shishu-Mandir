@@ -454,40 +454,68 @@ function addFloatingAIMessage(role,text){
 function renderAIAnswer(container,raw){
  if(!container)return;
  const answer=fixRishikaName(String(raw||"")),tick=String.fromCharCode(96).repeat(3);
- container.innerHTML="";
- const addText=(txt)=>{txt.split("\n\n").forEach(line=>{
-  line=line.trim();if(!line)return;
-  if(line.startsWith("![")&&line.endsWith(")")){
-   const split=line.indexOf("]("),url=line.slice(split+2,-1),alt=line.slice(2,split);
-   if(split>0&&url.startsWith("https://")){
-    const fig=document.createElement("figure"),img=document.createElement("img");fig.className="ai-answer-image";img.src=url;img.alt=alt||"Illustration";img.loading="lazy";img.referrerPolicy="no-referrer";fig.appendChild(img);
-    if(alt){const cap=document.createElement("figcaption");cap.textContent=alt;fig.appendChild(cap)}container.appendChild(fig);return;
+ container.replaceChildren();
+ const addText=(txt)=>{
+  const imagePattern=/!\\[([^\\]]*)\\]\\((https:\\/\\/[^\\s)]+)\\)/g;
+  txt.split(/\\n\\n+/).forEach(line=>{
+   line=line.trim();if(!line)return;
+   let cursor=0,match;
+   while((match=imagePattern.exec(line))){
+    const before=line.slice(cursor,match.index).trim();
+    if(before){const p=document.createElement("p");p.textContent=cleanAIAnswer(before);container.appendChild(p)}
+    const fig=document.createElement("figure");fig.className="ai-answer-image";
+    const img=document.createElement("img");img.src=match[2];img.alt=match[1]||"Illustration";img.loading="lazy";img.referrerPolicy="no-referrer";
+    img.addEventListener("error",()=>{fig.replaceChildren();const cap=document.createElement("figcaption");cap.textContent="चित्र का स्रोत उपलब्ध नहीं है।";fig.appendChild(cap)},{once:true});
+    fig.appendChild(img);if(match[1]){const cap=document.createElement("figcaption");cap.textContent=match[1];fig.appendChild(cap)}
+    container.appendChild(fig);cursor=match.index+match[0].length;
    }
+   const tail=line.slice(cursor).trim();if(tail){const p=document.createElement("p");p.textContent=cleanAIAnswer(tail);container.appendChild(p)}
+  });
+ };
+ const renderIndiaMap=()=>{
+  const fig=document.createElement("figure");fig.className="ai-answer-chart ai-india-map";
+  const title=document.createElement("figcaption");title.textContent="भारत का मानचित्र";fig.appendChild(title);
+  const svg=document.createElementNS("http://www.w3.org/2000/svg","svg");svg.setAttribute("viewBox","0 0 300 340");svg.setAttribute("role","img");svg.setAttribute("aria-label","भारत का रूपरेखात्मक मानचित्र");
+  const path=document.createElementNS(svg.namespaceURI,"path");
+  path.setAttribute("d","M92 18 L112 29 L126 25 L138 40 L158 47 L174 64 L195 76 L213 93 L226 111 L215 124 L205 137 L198 151 L187 166 L177 182 L171 201 L163 218 L154 238 L143 259 L132 279 L121 302 L111 285 L106 266 L97 247 L89 227 L78 209 L67 191 L57 173 L48 154 L39 135 L30 118 L42 104 L51 91 L58 76 L65 61 L74 48 L78 34 Z");
+  path.setAttribute("fill","#f4d9a5");path.setAttribute("stroke","#7b2d26");path.setAttribute("stroke-width","4");path.setAttribute("stroke-linejoin","round");
+  svg.appendChild(path);
+  const label=document.createElementNS(svg.namespaceURI,"text");label.setAttribute("x","150");label.setAttribute("y","324");label.setAttribute("text-anchor","middle");label.setAttribute("font-size","13");label.setAttribute("fill","#7b2d26");label.textContent="भारत • रूपरेखात्मक";svg.appendChild(label);
+  fig.appendChild(svg);container.appendChild(fig);
+ };
+ const renderChart=(c)=>{
+  const labels=(c.labels||[]).slice(0,8),vals=(c.values||[]).slice(0,8).map(Number);
+  if(!labels.length||labels.length!==vals.length||!vals.every(Number.isFinite))throw Error("invalid chart");
+  const fig=document.createElement("figure"),title=document.createElement("figcaption");fig.className="ai-answer-chart";title.textContent=c.title||"Graph";fig.appendChild(title);
+  const type=String(c.type||"bar").toLowerCase(),max=Math.max(1,...vals),min=Math.min(0,...vals);
+  if(type==="pie"){
+   const total=vals.reduce((s,v)=>s+Math.max(0,v),0);if(!total)throw Error("zero pie data");
+   let acc=0;const stops=vals.map((v,i)=>{const a=acc;acc+=Math.max(0,v)/total*100;return "hsl("+((i*67+12)%360)+" 55% 52%) "+a+"% "+acc+"%"}).join(",");
+   const pie=document.createElement("div");pie.className="ai-pie-chart";pie.style.background="conic-gradient("+stops+")";pie.setAttribute("role","img");pie.setAttribute("aria-label",labels.map((l,i)=>l+": "+vals[i]).join(", "));fig.appendChild(pie);
+   labels.forEach((label,i)=>{const row=document.createElement("p");row.className="ai-chart-legend";row.textContent=String(label)+": "+vals[i];fig.appendChild(row)});
+  }else if(type==="line"){
+   const svg=document.createElementNS("http://www.w3.org/2000/svg","svg");svg.setAttribute("viewBox","0 0 320 160");svg.setAttribute("role","img");svg.setAttribute("aria-label",labels.map((l,i)=>l+": "+vals[i]).join(", "));
+   const points=vals.map((v,i)=>(20+i*(280/Math.max(1,vals.length-1)))+","+(140-(v-min)/Math.max(1,max-min)*115)).join(" ");
+   const line=document.createElementNS(svg.namespaceURI,"polyline");line.setAttribute("points",points);line.setAttribute("fill","none");line.setAttribute("stroke","#8b5143");line.setAttribute("stroke-width","4");line.setAttribute("stroke-linecap","round");line.setAttribute("stroke-linejoin","round");svg.appendChild(line);
+   vals.forEach((v,i)=>{const dot=document.createElementNS(svg.namespaceURI,"circle");dot.setAttribute("cx",20+i*(280/Math.max(1,vals.length-1)));dot.setAttribute("cy",140-(v-min)/Math.max(1,max-min)*115);dot.setAttribute("r","4");dot.setAttribute("fill","#7b2d26");svg.appendChild(dot)});
+   fig.appendChild(svg);labels.forEach((label,i)=>{const row=document.createElement("p");row.className="ai-chart-legend";row.textContent=String(label)+": "+vals[i];fig.appendChild(row)});
+  }else{
+   labels.forEach((label,i)=>{const row=document.createElement("div");row.className="ai-chart-row";const name=document.createElement("span");name.textContent=String(label).slice(0,24);const track=document.createElement("div");track.className="ai-chart-track";const bar=document.createElement("div");bar.className="ai-chart-bar";bar.style.width=Math.max(0,Math.min(100,vals[i]/max*100))+"%";track.appendChild(bar);const value=document.createElement("b");value.textContent=String(vals[i]);row.append(name,track,value);fig.appendChild(row)});
   }
-  const p=document.createElement("p");p.textContent=cleanAIAnswer(line);container.appendChild(p);
- });};
- let pos=0,marker=tick+"chart";
- while(true){
-  const at=answer.indexOf(marker,pos);if(at<0)break;
-  const dataStart=at+marker.length,close=answer.indexOf(tick,dataStart);if(close<0)break;
-  addText(answer.slice(pos,at));
-  try{
-   const c=JSON.parse(answer.slice(dataStart,close).trim()),labels=(c.labels||[]).slice(0,8),vals=(c.values||[]).slice(0,8).map(Number);
-   if(!labels.length||labels.length!==vals.length||!vals.every(Number.isFinite))throw Error("invalid chart");
-   const fig=document.createElement("figure"),title=document.createElement("figcaption");fig.className="ai-answer-chart";title.textContent=c.title||"Graph";fig.appendChild(title);
-   const max=Math.max(1,...vals);
-   labels.forEach((label,i)=>{
-    const row=document.createElement("div");row.className="ai-chart-row";
-    const name=document.createElement("span");name.textContent=String(label).slice(0,24);
-    const track=document.createElement("div");track.className="ai-chart-track";
-    const bar=document.createElement("div");bar.className="ai-chart-bar";bar.style.width=Math.max(0,Math.min(100,vals[i]/max*100))+"%";track.appendChild(bar);
-    const value=document.createElement("b");value.textContent=String(vals[i]);row.append(name,track,value);fig.appendChild(row);
-   });
-   container.appendChild(fig);
-  }catch{addText("Graph could not be displayed; please see the values in the answer.");}
+  container.appendChild(fig);
+ };
+ let pos=0;
+ while(pos<answer.length){
+  const chartAt=answer.indexOf(tick+"chart",pos),mapAt=answer.indexOf("[[INDIA_MAP]]",pos);
+  const next=[chartAt,mapAt].filter(i=>i>=0).sort((a,b)=>a-b)[0];
+  if(next===undefined){addText(answer.slice(pos));break}
+  addText(answer.slice(pos,next));
+  if(next===mapAt){renderIndiaMap();pos=mapAt+"[[INDIA_MAP]]".length;continue}
+  const dataStart=chartAt+(tick+"chart").length,close=answer.indexOf(tick,dataStart);
+  if(close<0){addText(answer.slice(chartAt));break}
+  try{renderChart(JSON.parse(answer.slice(dataStart,close).trim()))}catch{addText("Graph could not be displayed. Please check the values and try again.")}
   pos=close+tick.length;
  }
- addText(answer.slice(pos));
 }
 function cleanAIAnswer(text){
  return String(text||"")
