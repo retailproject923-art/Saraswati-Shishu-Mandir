@@ -451,6 +451,20 @@ function addFloatingAIMessage(role,text){
  aiMessages.scrollTop=aiMessages.scrollHeight;
  return node;
 }
+function renderAIAnswer(container,raw){
+ if(!container)return;const answer=fixReesikaName(String(raw||""));container.innerHTML="";
+ const re=/```chart\\s*([\\s\\S]*?)```/gi;let last=0,m;
+ const addText=(txt)=>{txt.split(/\\n{2,}/).forEach(line=>{line=line.trim();if(!line)return;
+  const im=line.match(/^!\\[([^\\]]*)\\]\\((https:\\/\\/[^\\s)]+)\\)$/);
+  if(im){const fig=document.createElement("figure"),img=document.createElement("img");fig.className="ai-answer-image";img.src=im[2];img.alt=im[1]||"Illustration";img.loading="lazy";img.referrerPolicy="no-referrer";fig.appendChild(img);if(im[1]){const cap=document.createElement("figcaption");cap.textContent=im[1];fig.appendChild(cap)}container.appendChild(fig);return}
+  const p=document.createElement("p");p.textContent=cleanAIAnswer(line);container.appendChild(p);});};
+ while((m=re.exec(answer))){addText(answer.slice(last,m.index));try{const c=JSON.parse(m[1]),labels=(c.labels||[]).slice(0,8),vals=(c.values||[]).slice(0,8).map(Number);
+  if(!labels.length||labels.length!==vals.length||!vals.every(Number.isFinite))throw Error();
+  const fig=document.createElement("figure"),title=document.createElement("figcaption");fig.className="ai-answer-chart";title.textContent=c.title||"Graph";fig.appendChild(title);
+  const max=Math.max(1,...vals);labels.forEach((label,i)=>{const row=document.createElement("div");row.className="ai-chart-row";const name=document.createElement("span");name.textContent=String(label).slice(0,24);const track=document.createElement("div");track.className="ai-chart-track";const bar=document.createElement("div");bar.className="ai-chart-bar";bar.style.width=Math.max(0,Math.min(100,vals[i]/max*100))+"%";track.appendChild(bar);const value=document.createElement("b");value.textContent=String(vals[i]);row.append(name,track,value);fig.appendChild(row)});container.appendChild(fig);
+ }catch{addText("Graph could not be displayed; please see the values in the answer.")}last=re.lastIndex;}
+ addText(answer.slice(last));
+}
 function cleanAIAnswer(text){
  return String(text||"")
   .replace(/\[([^\]]+)\]\((?:https?:\/\/[^)]+)\)/g,"$1")
@@ -490,7 +504,7 @@ async function sendVoiceToAI(blob){
   const data=await response.json().catch(()=>({}));
   if(!response.ok)throw new Error(data.error||"Voice AI अभी जवाब नहीं दे सका।");
   const answer=cleanAIAnswer(data.answer);if(!answer)throw new Error("आवाज़ का जवाब खाली मिला।");
-  if(pending){pending.textContent=answer;const b=document.createElement("button");b.type="button";b.className="ai-speak-button";b.textContent="🔊 जवाब सुनें";b.addEventListener("click",()=>speakSaraswatiAnswer(answer));pending.append(document.createElement("br"),b)}
+  if(pending){renderAIAnswer(pending,answer);const b=document.createElement("button");b.type="button";b.className="ai-speak-button";b.textContent="🔊 जवाब सुनें";b.addEventListener("click",()=>speakSaraswatiAnswer(answer));pending.append(document.createElement("br"),b)}
   floatingAIHistory.push({role:"assistant",content:answer});
   if(aiVoiceStatus)aiVoiceStatus.textContent="जवाब मिल गया। नीचे 🔊 जवाब सुनें दबाएँ।";
  }catch(error){if(pending)pending.textContent="आवाज़ का जवाब नहीं मिला: "+(error.message||"फिर प्रयास करें।");if(aiVoiceStatus)aiVoiceStatus.textContent="आवाज़ भेजने में समस्या हुई।"}
@@ -589,7 +603,7 @@ aiForm?.addEventListener("submit",async event=>{
   const answer=fixReesikaName(String(data.answer||"").trim());
   if(!answer)throw new Error("AI से खाली जवाब मिला।");
   if(pending){
-   pending.textContent=answer;
+   renderAIAnswer(pending,answer);
    const speakButton=document.createElement("button");
    speakButton.type="button";speakButton.className="ai-speak-button";speakButton.textContent="🔊 जवाब सुनें";
    speakButton.addEventListener("click",()=>speakSaraswatiAnswer(answer));
