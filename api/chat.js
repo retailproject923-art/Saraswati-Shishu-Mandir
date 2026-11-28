@@ -2,7 +2,7 @@
 function aiVoiceLanguagePrompt(lang){
  return lang==="en-IN"?"Listen to the user's recorded voice question, understand it in English or another language, and answer in English. If speech is unclear, politely ask them to repeat.":"इस रिकॉर्ड की गई आवाज़ को ध्यान से सुनें। सवाल हिंदी या English में हो सकता है। सवाल समझकर हिंदी में जवाब दें। अगर आवाज़ स्पष्ट न हो तो दोबारा बोलने को कहें।";
 }
-module.exports = async function handler(req,res){
+export default async function handler(req,res){
  res.setHeader("Cache-Control","no-store");
  if(req.method!=="POST")return res.status(405).json({error:"Method not allowed"});
  if(!process.env.GEMINI_API_KEY)return res.status(503).json({error:"GEMINI_API_KEY Vercel Production में मौजूद नहीं है।"});
