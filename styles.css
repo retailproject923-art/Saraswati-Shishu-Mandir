@@ -15,3 +15,7 @@
 
 /* AI visuals: responsive charts and India outline */
 .ai-answer-chart{width:100%;max-width:100%;box-sizing:border-box}.ai-answer-chart svg{display:block;width:100%;max-height:260px}.ai-india-map svg{max-width:320px;height:auto;margin:0 auto}.ai-pie-chart{width:min(220px,75vw);aspect-ratio:1;border-radius:50%;margin:12px auto}.ai-chart-legend{margin:4px 0;font-size:13px;color:#55483f}.ai-answer-image{max-width:100%}.ai-answer-image img{max-width:100%;height:auto;object-fit:contain}
+
+/* Detailed locally hosted India map: no third-party image service or paid API. */
+.ai-india-map .india-map-asset{display:block;width:min(100%,320px);height:auto;max-height:none;margin:0 auto;object-fit:contain}
+.ai-india-map .india-map-credit{display:block;margin-top:8px;font-size:11px;line-height:1.45;color:#6b5b50;text-align:center}
