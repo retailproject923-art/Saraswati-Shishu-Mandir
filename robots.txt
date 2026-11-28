@@ -1,0 +1,5 @@
+User-agent: *
+Allow: /
+Disallow: /api/
+
+Sitemap: https://saraswati-shishu-mandir-retailproject923-6937.vercel.app/sitemap.xml
