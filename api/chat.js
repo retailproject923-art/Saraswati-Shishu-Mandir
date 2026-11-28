@@ -66,8 +66,8 @@ module.exports = async function handler(req,res){
   let answer=data?.candidates?.[0]?.content?.parts?.map(p=>p.text||"").join("").trim();
   if(!answer){console.error("Gemini returned no text",JSON.stringify(data).slice(0,500));return res.status(502).json({error:"Gemini ने खाली उत्तर दिया। दोबारा प्रयास करें।"});}
   // Ensure direct India-map requests always include the renderer marker, even if the model omits it.
-  const mapRequest=/(भारत.*(नक्शा|मानचित्र)|भारत का (नक्शा|मानचित्र)|india\\s*(map|outline)|map of india|draw.{0,30}india|bharat ka (naksha|manchitra))/i.test(lastUserText);
-  if(mapRequest&&!answer.includes("[[INDIA_MAP]]"))answer+="\\n\\n[[INDIA_MAP]]";
+  const mapRequest=/(भारत.*(नक्शा|मानचित्र)|भारत का (नक्शा|मानचित्र)|india\s*(map|outline)|map of india|draw.{0,30}india|bharat ka (naksha|manchitra))/i.test(lastUserText);
+  if(mapRequest&&!answer.includes("[[INDIA_MAP]]"))answer+="\n\n[[INDIA_MAP]]";
   return res.status(200).json({answer});
  }catch(err){console.error("AI endpoint failed",String(err?.message||err).slice(0,300));return res.status(err?.name==="TimeoutError"||err?.name==="AbortError"?504:500).json({error:err?.name==="TimeoutError"||err?.name==="AbortError"?"AI जवाब देने में समय ले रहा है। कृपया छोटा सवाल भेजकर फिर प्रयास करें।":"AI सेवा में अस्थायी समस्या है। कृपया दोबारा प्रयास करें।"});}
 }
