@@ -27,16 +27,31 @@ export default async function handler(req,res){
    const voicePrompt=aiVoiceLanguagePrompt(body.voiceLanguage);
    contents.push({role:"user",parts:[{text:voicePrompt},{inline_data:{mime_type:mimeType,data:audioBase64}}]});
   }
-  const url="https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-lite:generateContent";
-  const response=await fetch(url,{method:"POST",headers:{"Content-Type":"application/json","x-goog-api-key":process.env.GEMINI_API_KEY},body:JSON.stringify({systemInstruction:{parts:[{text:system}]},contents,generationConfig:{temperature:0.25,maxOutputTokens:500}}),signal:AbortSignal.timeout(22000)});
-  const data=await response.json().catch(()=>({}));
-  if(!response.ok){
+  // Primary model plus automatic fallback for temporary capacity errors.
+  const modelCandidates=["gemini-3.1-flash-lite","gemini-3.8-flash"];
+  let response,data={},activeModel="";
+  for(const model of modelCandidates){
+   activeModel=model;
+   const url="https://generativelanguage.googleapis.com/v1beta/models/"+model+":generateContent";
+   response=await fetch(url,{method:"POST",headers:{"Content-Type":"application/json","x-goog-api-key":process.env.GEMINI_API_KEY},body:JSON.stringify({systemInstruction:{parts:[{text:system}]},contents,generationConfig:{temperature:0.25,maxOutputTokens:500}}),signal:AbortSignal.timeout(22000)});
+   data=await response.json().catch(()=>({}));
+   if(response.ok)break;
+   const status=response.status;
    const detail=String(data?.error?.message||"").slice(0,300);
-   console.error("Gemini API rejected request",response.status,data?.error?.status||"",detail);
-   if(response.status===400||response.status===403)return res.status(502).json({error:"Gemini ने API Key या API अनुमति अस्वीकार की है। Google AI Studio में इसी Key और Generative Language API की अनुमति जाँचें।"});
-   if(response.status===404)return res.status(502).json({error:"Gemini मॉडल उपलब्ध नहीं मिला। मॉडल सेटिंग जाँचनी होगी।"});
-   if(response.status===429)return res.status(429).json({error:"Gemini की मुफ्त अनुरोध सीमा/कोटा पूरी हो गई है। कुछ देर बाद फिर प्रयास करें।"});
-   return res.status(502).json({error:"Gemini सर्वर ने अनुरोध अस्वीकार किया (HTTP "+response.status+")। कृपया बाद में प्रयास करें।"});
+   console.error("Gemini model request failed",model,status,data?.error?.status||"",detail);
+   if((status===503||status===429)&&model!==modelCandidates[modelCandidates.length-1]){
+    console.warn("Trying backup Gemini model after temporary capacity/quota response.");
+    continue;
+   }
+   break;
+  }
+  if(!response.ok){
+   const status=response.status;
+   if(status===400||status===403)return res.status(502).json({error:"Gemini ने API Key या API अनुमति अस्वीकार की है। Google AI Studio में इसी Key और Generative Language API की अनुमति जाँचें।"});
+   if(status===404)return res.status(502).json({error:"Gemini का उपलब्ध मॉडल नहीं मिला। API मॉडल की उपलब्धता जाँचनी होगी।"});
+   if(status===429)return res.status(429).json({error:"Gemini की अनुरोध सीमा/कोटा पूरी हो गई है। कुछ देर बाद फिर प्रयास करें।"});
+   if(status===503)return res.status(503).json({error:"Gemini के दोनों मॉडल अभी व्यस्त हैं। कुछ देर बाद फिर प्रयास करें।"});
+   return res.status(502).json({error:"Gemini सर्वर ने अनुरोध अस्वीकार किया (HTTP "+status+")। कृपया बाद में प्रयास करें।"});
   }
   const answer=data?.candidates?.[0]?.content?.parts?.map(p=>p.text||"").join("").trim();
   if(!answer){console.error("Gemini returned no text",JSON.stringify(data).slice(0,500));return res.status(502).json({error:"Gemini ने खाली उत्तर दिया। दोबारा प्रयास करें।"});}
