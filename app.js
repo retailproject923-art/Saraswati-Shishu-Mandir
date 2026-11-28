@@ -2,7 +2,7 @@ const SUPABASE_URL="https://gnyhushvxqquvxepkinw.supabase.co";
 const SUPABASE_KEY="sb_publishable_lrP4onruHeKnZwgkeBjUPg_Yk3ik6-7";
 const client=window.supabase?.createClient(SUPABASE_URL,SUPABASE_KEY);
 const $=id=>document.getElementById(id);
-function fixReesikaName(value){return String(value??"").replace(/रीवीसा|रीविसा|रीवीशा|रीविका|रिवीसा|रीसिका|रिशिका/g,"रीसीका").replace(/Reevisa|Revisa|Rivisa|Risika/gi,"Reesika");}
+function fixReesikaName(value){return String(value??"").replace(/रीवीसा|रीविसा|रीवीशा|रीवीका|रीविका|रिवीसा|रीसिका|रिशिका/g,"रीसीका").replace(/Reevisa|Reevika|Reevica|Reevisha|Revisa|Rivisa|Rivika|Risika/gi,"Reesika");}
 
 $("year").textContent=new Date().getFullYear();
 let currentAds=[],adIndex=0,slideTimer=null,editingId=null;
@@ -143,26 +143,21 @@ const managementTranslations={"यूजर अप्रूवल एवं अ�
 const canonicalLanguagePairs={"रीसीका मिश्रा":"Reesika Mishra","रीसीका मिश्रा AI":"Reesika Mishra AI","रीसीका AI":"Reesika AI","द्वारा संचालित":"Powered by","होम":"Home","प्रबंधन":"Management","विद्यार्थी":"Students","शिक्षक":"Teachers","फीस और खाते":"Fees & Accounts","दान / Donation":"Donation","विद्यालय स्टोर":"School Store","उपस्थिति":"Attendance","रिपोर्ट":"Reports","सहायता":"Help","मुख्य मेन्यू":"Main Menu","माँ सरस्वती":"Goddess Saraswati","विद्यालय सूचना देखें":"View School Notices","लॉगिन करें":"Sign in"};
 Object.entries(canonicalLanguagePairs).forEach(([hi,en])=>{schoolHiToEn[hi]=en;schoolEnToHi[en]=hi;});
 Object.entries(managementTranslations).forEach(([hi,en])=>{schoolHiToEn[hi]=en;schoolEnToHi[en]=hi;});
-// Normalize mixed-direction translation entries. Older additions accidentally placed
-// English->Hindi pairs in the Hindi->English map and vice versa, causing the language
-// buttons to appear inverted. Rebuild both maps according to the script used.
+// Rebuild both dictionaries from a clean set of language pairs.
+// Do not mutate a dictionary while iterating over it: that caused entries to
+// be inserted in the opposite direction and made the language buttons invert.
 const containsDevanagari=value=>/[\u0900-\u097F]/.test(String(value));
-Object.entries(schoolHiToEn).forEach(([key,value])=>{
- if(!containsDevanagari(key)&&containsDevanagari(value)){
-  schoolEnToHi[key]=value;
-  schoolHiToEn[value]=key;
- }else if(containsDevanagari(key)&&!containsDevanagari(value)){
-  schoolEnToHi[value]=key;
- }
-});
-Object.entries(schoolEnToHi).forEach(([key,value])=>{
- if(containsDevanagari(key)&&!containsDevanagari(value)){
-  schoolHiToEn[key]=value;
-  schoolEnToHi[value]=key;
- }else if(!containsDevanagari(key)&&containsDevanagari(value)){
-  schoolHiToEn[value]=key;
- }
-});
+const languagePairSources=[schoolHiToEn,schoolEnToHi,managementTranslations,canonicalLanguagePairs];
+const cleanHiToEn={},cleanEnToHi={};
+languagePairSources.forEach(source=>Object.entries(source).forEach(([key,value])=>{
+ const keyIsHindi=containsDevanagari(key),valueIsHindi=containsDevanagari(value);
+ if(keyIsHindi&&!valueIsHindi){cleanHiToEn[key]=value;cleanEnToHi[value]=key;}
+ else if(!keyIsHindi&&valueIsHindi){cleanEnToHi[key]=value;cleanHiToEn[value]=key;}
+}));
+Object.keys(schoolHiToEn).forEach(key=>delete schoolHiToEn[key]);
+Object.keys(schoolEnToHi).forEach(key=>delete schoolEnToHi[key]);
+Object.assign(schoolHiToEn,cleanHiToEn);
+Object.assign(schoolEnToHi,cleanEnToHi);
 function translateWholePage(lang){
  const map=lang==="en"?schoolHiToEn:schoolEnToHi;
  const walker=document.createTreeWalker(document.body,NodeFilter.SHOW_TEXT);
