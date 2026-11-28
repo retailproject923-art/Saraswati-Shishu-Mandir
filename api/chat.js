@@ -33,7 +33,7 @@ module.exports = async function handler(req,res){
   for(const model of modelCandidates){
    activeModel=model;
    const url="https://generativelanguage.googleapis.com/v1beta/models/"+model+":generateContent";
-   response=await fetch(url,{method:"POST",headers:{"Content-Type":"application/json","x-goog-api-key":process.env.GEMINI_API_KEY},body:JSON.stringify({systemInstruction:{parts:[{text:system}]},contents,generationConfig:{temperature:0.25,maxOutputTokens:500}}),signal:AbortSignal.timeout(22000)});
+   response=await fetch(url,{method:"POST",headers:{"Content-Type":"application/json","x-goog-api-key":process.env.GEMINI_API_KEY},body:JSON.stringify({systemInstruction:{parts:[{text:system}]},contents,generationConfig:{temperature:0.25,maxOutputTokens:500}}),signal:AbortSignal.timeout(7500)});
    data=await response.json().catch(()=>({}));
    if(response.ok){console.info("Gemini response received",model,response.status);break;}
    const status=response.status;
