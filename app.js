@@ -259,9 +259,11 @@ function showPortal(page){
  if(donation){renderDonationPage();$("donationPage").scrollIntoView({behavior:"smooth"});return}
  if(!home){$("portalTitle").textContent=navLabels[page]||"School Systems";$("portalIntro").textContent="किसी सिस्टम पर टैप करें। उसकी जानकारी, उपयोग और उपलब्धता खुलेगी।";renderModules(moduleData.filter(m=>m.group===navGroups[page]));$("modulePortal").scrollIntoView({behavior:"smooth"})}
 }
+moduleData.forEach(m=>{if(m.en){schoolHiToEn[m.title]=m.en;schoolEnToHi[m.en]=m.title;}});
 function renderModules(items){
  const grid=$("moduleGrid");grid.innerHTML="";
- items.forEach(m=>{const b=document.createElement("button");b.className="module-card";b.dataset.module=m.id;const img=document.createElement("img");img.src=m.img;img.alt=m.title;img.loading="lazy";img.onerror=()=>img.style.display="none";const body=document.createElement("div");body.className="module-card-body";const h=document.createElement("h3");h.textContent=m.title;const p=document.createElement("p");p.textContent=m.desc;const s=document.createElement("span");s.className="module-status"+(m.ready?" ready":"");s.textContent=m.ready?"उपलब्ध: सीमित कार्य":"निर्माणाधीन — अभी सक्रिय नहीं";body.append(h,p,s);b.append(img,body);grid.append(b)})
+ const english=document.documentElement.lang==="en";
+ items.forEach(m=>{const b=document.createElement("button");b.className="module-card";b.dataset.module=m.id;const img=document.createElement("img");img.src=m.img;img.alt=english?(m.en||m.title):m.title;img.loading="lazy";img.onerror=()=>img.style.display="none";const body=document.createElement("div");body.className="module-card-body";const h=document.createElement("h3");h.textContent=english?(m.en||m.title):m.title;const p=document.createElement("p");p.textContent=english?(schoolHiToEn[m.desc]||m.desc):m.desc;const status=document.createElement("span");status.className="module-status"+(m.ready?" ready":"");status.textContent=english?(m.ready?"Available: limited functions":"In development — not active yet"):(m.ready?"उपलब्ध: सीमित कार्य":"निर्माणाधीन — अभी सक्रिय नहीं");body.append(h,p,status);b.append(img,body);grid.append(b)})
 }
 function openModule(id){
  const m=moduleData.find(x=>x.id===id);if(!m)return;
