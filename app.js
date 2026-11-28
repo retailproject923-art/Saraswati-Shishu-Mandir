@@ -142,7 +142,7 @@ Object.entries(managementTranslations).forEach(([hi,en])=>{schoolHiToEn[hi]=en;s
 // Normalize mixed-direction translation entries. Older additions accidentally placed
 // English->Hindi pairs in the Hindi->English map and vice versa, causing the language
 // buttons to appear inverted. Rebuild both maps according to the script used.
-const containsDevanagari=value=>/[\\u0900-\\u097F]/.test(String(value));
+const containsDevanagari=value=>/[\u0900-\u097F]/.test(String(value));
 Object.entries(schoolHiToEn).forEach(([key,value])=>{
  if(!containsDevanagari(key)&&containsDevanagari(value)){
   schoolEnToHi[key]=value;
